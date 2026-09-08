@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alta Solicitada — SEDES Oruro</title>
+<meta name="description" content="Sistema de notificación de alta solicitada del Servicio Departamental de Salud de Oruro.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="contenedor cabecera__interior">
+    <div>
+      <p class="cabecera__institucion">SEDES Oruro — Servicio Departamental de Salud</p>
+      <h1 class="cabecera__titulo">Notificación de Alta Solicitada</h1>
+    </div>
+  </div>
+</header>
+
+<nav class="pestanas" aria-label="Secciones del sistema">
+  <div class="contenedor pestanas__interior">
+    <button type="button" class="pestana pestana--activa" data-panel="panel-llenado" aria-selected="true">
+      1. Llenado de información
+    </button>
+    <button type="button" class="pestana" data-panel="panel-subida" aria-selected="false">
+      2. Subir alta firmada
+    </button>
+  </div>
+</nav>
+
+<main class="contenedor">
+
+  <!-- ================================================================
+       SECCIÓN A — LLENADO DE INFORMACIÓN
+       ================================================================ -->
+  <section id="panel-llenado" class="panel">
+
+    <div class="intro">
+      <p>
+        Complete el formulario para registrar la solicitud de alta voluntaria. Al guardar,
+        el sistema asignará un <strong>código de alta correlativo único</strong> y generará el
+        documento en PDF con el formato oficial, listo para imprimir y firmar.
+      </p>
+      <button type="button" id="btn-nueva-solicitud" class="boton boton--primario">
+        Nueva Solicitud de Alta
+      </button>
+    </div>
+
+    <form id="form-alta" class="formulario" novalidate hidden>
+
+      <!-- 1. Establecimiento -->
+      <fieldset class="bloque">
+        <legend class="bloque__titulo">1. Datos del Establecimiento de Salud</legend>
+        <div class="grilla">
+          <div class="campo">
+            <label for="nombre_establecimiento">Nombre del Establecimiento de Salud <span class="req">*</span></label>
+            <input type="text" id="nombre_establecimiento" name="nombre_establecimiento" maxlength="255" autocomplete="off" required>
+            <p class="campo__error" data-error-de="nombre_establecimiento"></p>
+          </div>
+          <div class="campo">
+            <label for="servicio_unidad">Servicio/Unidad <span class="req">*</span></label>
+            <input type="text" id="servicio_unidad" name="servicio_unidad" maxlength="255" autocomplete="off" required>
+            <p class="campo__error" data-error-de="servicio_unidad"></p>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- 2. Paciente -->
+      <fieldset class="bloque">
+        <legend class="bloque__titulo">2. Información del Paciente</legend>
+        <div class="grilla">
+          <div class="campo campo--ancho">
+            <label for="nombre_paciente">Nombres y Apellidos <span class="req">*</span></label>
+            <input type="text" id="nombre_paciente" name="nombre_paciente" maxlength="255" autocomplete="off" required>
+            <p class="campo__error" data-error-de="nombre_paciente"></p>
+          </div>
+          <div class="campo">
+            <label for="numero_historia_clinica">Número de Historia Clínica <span class="req">*</span></label>
+            <input type="text" id="numero_historia_clinica" name="numero_historia_clinica" maxlength="100" autocomplete="off" required>
+            <p class="campo__error" data-error-de="numero_historia_clinica"></p>
+          </div>
+          <div class="campo">
+            <label for="numero_referencia">Número de Referencia <span class="opcional">(opcional)</span></label>
+            <input type="text" id="numero_referencia" name="numero_referencia" maxlength="100" autocomplete="off">
+            <p class="campo__error" data-error-de="numero_referencia"></p>
+          </div>
+          <div class="campo campo--ancho">
+            <label for="domicilio">Domicilio <span class="req">*</span></label>
+            <input type="text" id="domicilio" name="domicilio" maxlength="255" autocomplete="off" required>
+            <p class="campo__error" data-error-de="domicilio"></p>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- 3. Internación -->
+      <fieldset class="bloque">
+        <legend class="bloque__titulo">3. Detalles de la Internación</legend>
+        <div class="grilla">
+          <div class="campo">
+            <label for="fecha_internacion">Fecha de Internación <span class="req">*</span></label>
+            <input type="date" id="fecha_internacion" name="fecha_internacion" required>
+            <p class="campo__error" data-error-de="fecha_internacion"></p>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- 4. Declaración -->
+      <fieldset class="bloque">
+        <legend class="bloque__titulo">4. Declaración de Alta Solicitada</legend>
+        <p class="declaracion">
+          El que suscribe, en pleno uso de sus facultades, solicita la alta voluntaria del
+          establecimiento de salud mencionado, asumiendo la responsabilidad total de las
+          consecuencias que esta decisión pueda tener sobre su salud, tras haber sido
+          informado por el personal médico sobre los riesgos de interrumpir el tratamiento
+          o la observación.
+        </p>
+        <div class="campo">
+          <label for="motivo_alta">Motivo de Alta según Paciente <span class="req">*</span></label>
+          <textarea id="motivo_alta" name="motivo_alta" rows="6" maxlength="5000" required
+                    placeholder="Transcriba el motivo expresado por el paciente."></textarea>
+          <p class="campo__ayuda"><span id="contador-motivo">0</span> / 5000 caracteres</p>
+          <p class="campo__error" data-error-de="motivo_alta"></p>
+        </div>
+      </fieldset>
+
+      <!-- 5. Firmas y fecha -->
+      <fieldset class="bloque">
+        <legend class="bloque__titulo">5. Firmas y Fecha</legend>
+        <div class="grilla">
+          <div class="campo">
+            <label for="fecha_solicitud">Fecha de la Solicitud <span class="req">*</span></label>
+            <input type="date" id="fecha_solicitud" name="fecha_solicitud" required>
+            <p class="campo__error" data-error-de="fecha_solicitud"></p>
+          </div>
+          <div class="campo">
+            <label for="hora_solicitud">Hora de la Solicitud <span class="req">*</span></label>
+            <input type="time" id="hora_solicitud" name="hora_solicitud" required>
+            <p class="campo__error" data-error-de="hora_solicitud"></p>
+          </div>
+          <div class="campo">
+            <label for="dni_documento">DNI/Documento de Identidad <span class="req">*</span></label>
+            <input type="text" id="dni_documento" name="dni_documento" maxlength="50" autocomplete="off" required>
+            <p class="campo__error" data-error-de="dni_documento"></p>
+          </div>
+        </div>
+        <p class="aviso">
+          Las firmas del paciente/representante legal y del médico tratante <strong>no se
+          capturan digitalmente</strong>: el PDF se imprime con las líneas en blanco y se firma
+          en físico. El documento firmado se sube después en <em>«Subir alta firmada»</em>.
+        </p>
+      </fieldset>
+
+      <div class="acciones">
+        <button type="submit" class="boton boton--primario" id="btn-guardar">Guardar y generar código</button>
+        <button type="button" class="boton boton--plano" id="btn-cancelar">Cancelar</button>
+      </div>
+
+      <p class="mensaje" id="mensaje-alta" role="status" hidden></p>
+    </form>
+
+    <!-- Resultado tras guardar -->
+    <div class="resultado" id="resultado-alta" hidden>
+      <p class="resultado__etiqueta">Código de alta asignado</p>
+      <p class="resultado__codigo" id="codigo-asignado">—</p>
+      <p class="resultado__detalle" id="resultado-detalle"></p>
+      <div class="acciones">
+        <a class="boton boton--primario" id="btn-descargar-pdf" href="#" download>Descargar PDF</a>
+        <a class="boton boton--secundario" id="btn-ver-pdf" href="#" target="_blank" rel="noopener">Ver PDF</a>
+        <button type="button" class="boton boton--plano" id="btn-otra-solicitud">Registrar otra solicitud</button>
+      </div>
+      <p class="resultado__nota">
+        Anote o conserve este código: será necesario para subir el documento una vez firmado.
+      </p>
+    </div>
+
+  </section>
+
+  <!-- ================================================================
+       SECCIÓN B — SUBIR ALTA FIRMADA
+       ================================================================ -->
+  <section id="panel-subida" class="panel" hidden>
+
+    <div class="intro">
+      <p>
+        Suba el formato de alta ya firmado en físico (escaneado o fotografiado). El sistema
+        verificará que el código de alta corresponda a una solicitud registrada antes de
+        aceptar el archivo.
+      </p>
+    </div>
+
+    <form id="form-subida" class="formulario" novalidate enctype="multipart/form-data">
+      <fieldset class="bloque">
+        <legend class="bloque__titulo">Documento firmado</legend>
+
+        <div class="campo">
+          <label for="codigo_alta">Código de Alta <span class="req">*</span></label>
+          <input type="text" id="codigo_alta" name="codigo_alta" maxlength="20"
+                 placeholder="ALTA-000001" autocomplete="off" spellcheck="false" required>
+          <p class="campo__ayuda" id="estado-codigo"></p>
+          <p class="campo__error" data-error-de="codigo_alta"></p>
+        </div>
+
+        <div class="campo">
+          <label for="archivo">Adjuntar Documento <span class="req">*</span></label>
+          <input type="file" id="archivo" name="archivo" accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg" required>
+          <p class="campo__ayuda">Formatos aceptados: PDF o JPG. Tamaño máximo: 10 MB.</p>
+          <p class="campo__error" data-error-de="archivo"></p>
+        </div>
+      </fieldset>
+
+      <div class="acciones">
+        <button type="submit" class="boton boton--primario" id="btn-subir">Subir documento</button>
+        <button type="button" class="boton boton--plano" id="btn-limpiar-subida">Limpiar</button>
+      </div>
+
+      <p class="mensaje" id="mensaje-subida" role="status" hidden></p>
+    </form>
+
+    <div class="resultado" id="resultado-subida" hidden>
+      <p class="resultado__etiqueta">Documento recibido</p>
+      <p class="resultado__codigo" id="subida-codigo">—</p>
+      <p class="resultado__detalle" id="subida-detalle"></p>
+      <div class="acciones">
+        <button type="button" class="boton boton--plano" id="btn-otra-subida">Subir otro documento</button>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="pie">
+  <div class="contenedor">
+    <p>SEDES Oruro — Sistema de Notificación de Alta Solicitada</p>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

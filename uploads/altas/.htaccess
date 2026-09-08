@@ -1,0 +1,17 @@
+# Impide que cualquier archivo subido sea ejecutado como PHP
+php_flag engine off
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+# Deshabilita handlers de scripts por si el servidor usa CGI/FastCGI
+<FilesMatch "\.(php|php3|php4|php5|php7|phtml|pht|phar|cgi|pl|py|sh|htaccess)$">
+    Require all denied
+</FilesMatch>
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .phar
+AddType text/plain .php .phtml .phar
+# Sin listado de directorio
+Options -Indexes -ExecCGI

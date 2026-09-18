@@ -1,7 +1,10 @@
 # Sistema Web «Alta Solicitada» — SEDES Oruro
 
-Digitalización del **Formato de Notificación de Alta Solicitada** (alta voluntaria de un
+Digitalización del **Formulario de Notificación de Alta Solicitada** (alta voluntaria de un
 paciente que decide retirarse de un establecimiento de salud bajo su propia responsabilidad).
+
+El PDF reproduce el formulario oficial con su **membrete institucional**: el escudo del
+Departamento de Oruro y la leyenda «SERVICIO DEPARTAMENTAL DE SALUD - ORURO».
 
 Una sola página web con dos funciones:
 
@@ -51,6 +54,19 @@ mysql -u USUARIO -p sedes_altas < schema.sql
 
 Esto crea las tablas `altas` y `alta_adjuntos`.
 
+**Si ya tenía instalada la versión anterior del sistema**, no ejecute `schema.sql`: use la
+migración, que conserva los registros existentes y añade los campos del formulario nuevo
+(Red de salud, Municipio, Edad, Sexo, Hora de internación, Diagnósticos de ingreso y egreso,
+Grado de parentesco, y el cambio de «DNI/Documento» a «Cédula de Identidad/Pasaporte»):
+
+```bash
+mysqldump -u USUARIO -p sedes_altas > respaldo_antes_v2.sql
+mysql -u USUARIO -p sedes_altas < migracion_v1_a_v2.sql
+```
+
+Las filas anteriores quedan con valores provisionales visibles (`(no registrado)`, edad `0`)
+en los campos que antes no existían; corríjalos a mano si esos registros aún se usan.
+
 ### 2. Configurar la conexión
 
 ```bash
@@ -98,6 +114,7 @@ DELETE FROM alta_adjuntos; DELETE FROM altas; ALTER TABLE altas AUTO_INCREMENT =
 index.html                 Landing page única (dos secciones, sin recarga)
 assets/style.css           Estilos
 assets/app.js              Validación en cliente y llamadas fetch()
+assets/membrete.png        Escudo del Departamento de Oruro (membrete del PDF y de la web)
 
 config.php                 Conexión PDO + constantes de la aplicación
 config.example.php         Plantilla de configuración (sin credenciales)
@@ -112,7 +129,8 @@ lib/helpers.php            Respuestas JSON, validación, limitador de intentos
 lib/pdf_alta.php           Maquetación del PDF (fidelidad al formato Word)
 lib/fpdf/                  Librería FPDF 1.86 (incluida, sin Composer)
 
-schema.sql                 Creación de las tablas MySQL
+schema.sql                 Creación de las tablas MySQL (instalación nueva)
+migracion_v1_a_v2.sql      Actualización de una base ya instalada con el formato anterior
 uploads/altas/             Documentos firmados subidos (+ .htaccess de protección)
 data/                      Contadores del limitador de intentos (se crea sola)
 templates/                 Documentación de la Opción B (plantilla .docx)
@@ -126,10 +144,17 @@ Todos responden en JSON, salvo `generar_pdf.php` que devuelve el binario del PDF
 
 ### `crear_alta.php` — POST
 
-Acepta JSON o formulario. Campos: `nombre_establecimiento`, `servicio_unidad`,
-`nombre_paciente`, `numero_historia_clinica`, `numero_referencia` (opcional), `domicilio`,
-`fecha_internacion` (AAAA-MM-DD), `motivo_alta`, `fecha_solicitud` (AAAA-MM-DD),
-`hora_solicitud` (HH:MM), `dni_documento`.
+Acepta JSON o formulario.
+
+| Sección | Campos |
+|---|---|
+| 1. Establecimiento | `nombre_establecimiento`, `red_salud`, `municipio`, `servicio_unidad` |
+| 2. Paciente | `nombre_paciente`, `edad` (entero), `edad_unidad` (`anios`/`meses`/`dias`), `sexo` (`M`/`F`), `numero_historia_clinica`, `numero_referencia` *(opcional)*, `domicilio` |
+| 3. Internación | `fecha_internacion` (AAAA-MM-DD), `hora_internacion` (HH:MM), `diagnosticos_ingreso`, `fecha_solicitud`, `hora_solicitud`, `diagnosticos_egreso` |
+| 4. Declaración | `motivo_alta` |
+| 5. Firmas | `grado_parentesco` *(opcional)*, `ci_pasaporte` |
+
+El servidor rechaza un alta cuya fecha y hora sean anteriores a las de la internación.
 
 - `201` → `{ok, codigo_alta, registro, pdf_url}`
 - `400` → `{ok:false, error, campos:{campo: mensaje}}`
@@ -173,16 +198,19 @@ lleguen solicitudes simultáneas. La numeración es continua y no se reinicia.
 
 ## El PDF
 
-`lib/pdf_alta.php` reproduce el documento Word original: título centrado en negrita, las
-cinco secciones numeradas con encabezado en negrita, los valores escritos sobre líneas
-continuas (equivalentes a los `___` del Word), el párrafo de declaración justificado y la
-nota final. El código de alta aparece recuadrado en la esquina superior derecha de cada
-página.
+`lib/pdf_alta.php` reproduce el documento Word original: membrete con el escudo del
+Departamento de Oruro y la leyenda del SEDES, título centrado en negrita, las cinco secciones
+numeradas con encabezado en negrita, los valores escritos sobre líneas continuas
+(equivalentes a los `___` del Word), el párrafo de declaración justificado y la nota final.
+El código de alta aparece recuadrado en la esquina superior derecha de cada página.
 
-**Las firmas quedan en blanco a propósito.** El formato se imprime y se firma a mano; por eso
-«Firma del Paciente/Representante Legal» y «Firma y Sello del Médico Tratante/Testigo» son
-líneas vacías con espacio suficiente para firmar. La versión firmada se digitaliza y se sube
-en la Sección B.
+Con datos de longitud normal el formulario entra en **una sola página**. Los valores que no
+caben en su línea reducen el tamaño de letra automáticamente antes de recortarse.
+
+**Las firmas quedan en blanco a propósito.** El formulario se imprime y se firma a mano; por
+eso «Firma del Paciente/Representante Legal», «Firma y Sello del Médico» y «Firma Testigo»
+son tres líneas vacías con espacio suficiente para firmar y sellar. La versión firmada se
+digitaliza y se sube en la Sección B.
 
 ### Alternativa (Opción B)
 
@@ -232,8 +260,10 @@ location ^~ /uploads/ {
 
 ## Datos que maneja el sistema
 
-El sistema almacena datos de salud identificables (nombre, historia clínica, domicilio,
-documento de identidad y motivo clínico del alta). Recomendaciones mínimas para producción:
+El sistema almacena datos de salud identificables (nombre, edad, sexo, historia clínica,
+domicilio, cédula de identidad, diagnósticos de ingreso y egreso, y motivo clínico del alta).
+Los diagnósticos son datos clínicos sensibles, así que estas recomendaciones no son
+opcionales en un despliegue real. Recomendaciones mínimas para producción:
 
 - Servir el sitio **solo por HTTPS**.
 - Restringir el acceso a la página al personal del establecimiento (por ejemplo, con

@@ -1,9 +1,9 @@
 <?php
 /**
  * crear_alta.php
- * Recibe los datos del "Formato de Notificacion de Alta Solicitada",
- * los valida en servidor, los guarda en MySQL y genera el codigo
- * correlativo unico (ALTA-000001).
+ * Recibe los datos del "Formulario de Notificación de Alta Solicitada",
+ * los valida en servidor, los guarda en MySQL y genera el código
+ * correlativo único (ALTA-000001).
  *
  * Respuesta: JSON con el registro completo.
  */
@@ -16,17 +16,27 @@ limitar_intentos('crear', 40, 600);
 $in = entrada_post();
 
 // ---------------------------------------------------------------------
-// Definicion de campos: clave => array(etiqueta, obligatorio, maxLongitud)
+// Campos de texto: clave => array(etiqueta, obligatorio, maxLongitud)
 // ---------------------------------------------------------------------
 $camposTexto = array(
+    // 1. Datos del Establecimiento de Salud
     'nombre_establecimiento'  => array('Nombre del Establecimiento de Salud', true, 255),
+    'red_salud'               => array('Red de Salud', true, 255),
+    'municipio'               => array('Municipio', true, 255),
     'servicio_unidad'         => array('Servicio/Unidad', true, 255),
+    // 2. Información del Paciente
     'nombre_paciente'         => array('Nombres y Apellidos', true, 255),
     'numero_historia_clinica' => array('Número de Historia Clínica', true, 100),
     'numero_referencia'       => array('Número de Referencia', false, 100),
     'domicilio'               => array('Domicilio', true, 255),
+    // 3. Detalles de la Internación
+    'diagnosticos_ingreso'    => array('Diagnósticos de Ingreso', true, 300),
+    'diagnosticos_egreso'     => array('Diagnósticos de Egreso', true, 300),
+    // 4. Declaración de Alta Solicitada
     'motivo_alta'             => array('Motivo de Alta según Paciente', true, 5000),
-    'dni_documento'           => array('DNI/Documento de Identidad', true, 50),
+    // 5. Firmas y Fecha
+    'grado_parentesco'        => array('Grado de Parentesco', false, 120),
+    'ci_pasaporte'            => array('N° de Cédula de Identidad/Pasaporte', true, 50),
 );
 
 $errores = array();
@@ -41,74 +51,119 @@ foreach ($camposTexto as $clave => $def) {
     $datos[$clave] = $valor;
 }
 
-// Campos de fecha / hora
-if (!fecha_valida(isset($in['fecha_internacion']) ? trim($in['fecha_internacion']) : '')) {
-    $errores['fecha_internacion'] = 'La "Fecha de Internación" es obligatoria y debe tener formato AAAA-MM-DD.';
+// ---------------------------------------------------------------------
+// Edad, unidad de edad y sexo
+// ---------------------------------------------------------------------
+$edadCruda = isset($in['edad']) ? trim((string) $in['edad']) : '';
+if ($edadCruda === '' || !preg_match('/^\d{1,3}$/', $edadCruda)) {
+    $errores['edad'] = 'La "Edad" es obligatoria y debe ser un número entero.';
 } else {
-    $datos['fecha_internacion'] = trim($in['fecha_internacion']);
+    $datos['edad'] = (int) $edadCruda;
 }
 
-if (!fecha_valida(isset($in['fecha_solicitud']) ? trim($in['fecha_solicitud']) : '')) {
-    $errores['fecha_solicitud'] = 'La "Fecha de la Solicitud" es obligatoria y debe tener formato AAAA-MM-DD.';
+$unidadesValidas = array('anios', 'meses', 'dias');
+$unidad = isset($in['edad_unidad']) ? trim((string) $in['edad_unidad']) : 'anios';
+if (!in_array($unidad, $unidadesValidas, true)) {
+    $errores['edad_unidad'] = 'Seleccione si la edad está expresada en años, meses o días.';
 } else {
-    $datos['fecha_solicitud'] = trim($in['fecha_solicitud']);
+    $datos['edad_unidad'] = $unidad;
 }
 
-$hora = hora_normalizada(isset($in['hora_solicitud']) ? trim($in['hora_solicitud']) : '');
-if ($hora === null) {
-    $errores['hora_solicitud'] = 'La "Hora de la Solicitud" es obligatoria y debe tener formato HH:MM.';
+$sexo = isset($in['sexo']) ? strtoupper(trim((string) $in['sexo'])) : '';
+if ($sexo !== 'M' && $sexo !== 'F') {
+    $errores['sexo'] = 'El campo "Sexo" es obligatorio.';
 } else {
-    $datos['hora_solicitud'] = $hora;
+    $datos['sexo'] = $sexo;
 }
 
-// Coherencia: la solicitud de alta no puede ser anterior a la internacion.
-if (!$errores && $datos['fecha_solicitud'] < $datos['fecha_internacion']) {
-    $errores['fecha_solicitud'] = 'La fecha de solicitud no puede ser anterior a la fecha de internación.';
+// Coherencia clínica básica: nadie vive 150 años.
+if (!isset($errores['edad']) && isset($datos['edad_unidad'])) {
+    $topes = array('anios' => 130, 'meses' => 1560, 'dias' => 47450);
+    if ($datos['edad'] > $topes[$datos['edad_unidad']]) {
+        $errores['edad'] = 'La edad indicada no es válida.';
+    }
+}
+
+// ---------------------------------------------------------------------
+// Fechas y horas
+// ---------------------------------------------------------------------
+$fechas = array(
+    'fecha_internacion' => 'Fecha de Internación',
+    'fecha_solicitud'   => 'Fecha de Alta Solicitada',
+);
+foreach ($fechas as $clave => $etiqueta) {
+    $valor = isset($in[$clave]) ? trim((string) $in[$clave]) : '';
+    if (!fecha_valida($valor)) {
+        $errores[$clave] = 'La "' . $etiqueta . '" es obligatoria y debe tener formato AAAA-MM-DD.';
+    } else {
+        $datos[$clave] = $valor;
+    }
+}
+
+$horas = array(
+    'hora_internacion' => 'Hora de Internación',
+    'hora_solicitud'   => 'Hora de Solicitud',
+);
+foreach ($horas as $clave => $etiqueta) {
+    $valor = hora_normalizada(isset($in[$clave]) ? trim((string) $in[$clave]) : '');
+    if ($valor === null) {
+        $errores[$clave] = 'La "' . $etiqueta . '" es obligatoria y debe tener formato HH:MM.';
+    } else {
+        $datos[$clave] = $valor;
+    }
+}
+
+// El alta no puede producirse antes del ingreso.
+if (!isset($errores['fecha_internacion'], $errores['fecha_solicitud'])
+    && isset($datos['fecha_internacion'], $datos['fecha_solicitud'])) {
+    $ingreso = $datos['fecha_internacion'] . ' ' . (isset($datos['hora_internacion']) ? $datos['hora_internacion'] : '00:00:00');
+    $alta    = $datos['fecha_solicitud'] . ' ' . (isset($datos['hora_solicitud']) ? $datos['hora_solicitud'] : '00:00:00');
+    if (strtotime($alta) < strtotime($ingreso)) {
+        $errores['fecha_solicitud'] = 'La fecha y hora del alta no pueden ser anteriores a las de la internación.';
+    }
 }
 
 if ($errores) {
     error_json('Hay campos obligatorios sin completar o con formato inválido.', 400, array('campos' => $errores));
 }
 
-// El campo opcional se guarda como NULL cuando viene vacio.
-if ($datos['numero_referencia'] === '') {
-    $datos['numero_referencia'] = null;
+// Los campos opcionales se guardan como NULL cuando vienen vacíos.
+foreach (array('numero_referencia', 'grado_parentesco') as $opcional) {
+    if ($datos[$opcional] === '') {
+        $datos[$opcional] = null;
+    }
 }
 
 // ---------------------------------------------------------------------
-// Insercion + generacion del correlativo dentro de una sola transaccion.
-// El codigo se deriva del AUTO_INCREMENT, por lo que es unico por
-// construccion incluso ante solicitudes simultaneas.
+// Inserción + generación del correlativo dentro de una sola transacción.
+// El código se deriva del AUTO_INCREMENT, por lo que es único por
+// construcción incluso ante solicitudes simultáneas.
 // ---------------------------------------------------------------------
+$columnas = array(
+    'nombre_establecimiento', 'red_salud', 'municipio', 'servicio_unidad',
+    'nombre_paciente', 'edad', 'edad_unidad', 'sexo', 'numero_historia_clinica',
+    'numero_referencia', 'domicilio',
+    'fecha_internacion', 'hora_internacion', 'diagnosticos_ingreso',
+    'fecha_solicitud', 'hora_solicitud', 'diagnosticos_egreso',
+    'motivo_alta', 'grado_parentesco', 'ci_pasaporte',
+);
+
 try {
     $pdo = db();
     $pdo->beginTransaction();
 
-    $sql = 'INSERT INTO altas
-              (nombre_establecimiento, servicio_unidad, nombre_paciente,
-               numero_historia_clinica, numero_referencia, domicilio,
-               fecha_internacion, motivo_alta, fecha_solicitud,
-               hora_solicitud, dni_documento, estado)
-            VALUES
-              (:nombre_establecimiento, :servicio_unidad, :nombre_paciente,
-               :numero_historia_clinica, :numero_referencia, :domicilio,
-               :fecha_internacion, :motivo_alta, :fecha_solicitud,
-               :hora_solicitud, :dni_documento, "generado")';
+    $marcadores = array();
+    $valores    = array();
+    foreach ($columnas as $columna) {
+        $marcadores[] = ':' . $columna;
+        $valores[':' . $columna] = $datos[$columna];
+    }
+
+    $sql = 'INSERT INTO altas (' . implode(', ', $columnas) . ', estado) VALUES ('
+         . implode(', ', $marcadores) . ', "generado")';
 
     $st = $pdo->prepare($sql);
-    $st->execute(array(
-        ':nombre_establecimiento'  => $datos['nombre_establecimiento'],
-        ':servicio_unidad'         => $datos['servicio_unidad'],
-        ':nombre_paciente'         => $datos['nombre_paciente'],
-        ':numero_historia_clinica' => $datos['numero_historia_clinica'],
-        ':numero_referencia'       => $datos['numero_referencia'],
-        ':domicilio'               => $datos['domicilio'],
-        ':fecha_internacion'       => $datos['fecha_internacion'],
-        ':motivo_alta'             => $datos['motivo_alta'],
-        ':fecha_solicitud'         => $datos['fecha_solicitud'],
-        ':hora_solicitud'          => $datos['hora_solicitud'],
-        ':dni_documento'           => $datos['dni_documento'],
-    ));
+    $st->execute($valores);
 
     $id = (int) $pdo->lastInsertId();
 

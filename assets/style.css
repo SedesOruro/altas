@@ -48,8 +48,18 @@ body {
 }
 
 .cabecera__interior {
-  padding-top: 22px;
-  padding-bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.cabecera__escudo {
+  width: 54px;
+  height: auto;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35));
 }
 
 .cabecera__institucion {
@@ -101,6 +111,7 @@ body {
 .pestana:focus-visible,
 .boton:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
   outline: 3px solid rgba(15, 76, 129, .35);
   outline-offset: 1px;
@@ -162,9 +173,11 @@ main { padding: 28px 20px 56px; }
 .opcional { color: var(--gris); font-weight: 400; font-size: 12.5px; }
 
 input[type="text"],
+input[type="number"],
 input[type="date"],
 input[type="time"],
 input[type="file"],
+select,
 textarea {
   width: 100%;
   padding: 9px 11px;
@@ -176,14 +189,34 @@ textarea {
   transition: border-color .15s ease;
 }
 
-input:focus, textarea:focus { border-color: var(--azul); }
+input:focus, select:focus, textarea:focus { border-color: var(--azul); }
 
 textarea { resize: vertical; min-height: 110px; }
 
 input[type="file"] { padding: 8px; background: #fbfcfd; }
 
 .campo--invalido input,
+.campo--invalido select,
 .campo--invalido textarea { border-color: var(--rojo); background: #fffafa; }
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%235c6875' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 11px;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+/* Edad: número y unidad comparten una sola fila. */
+.campo__compuesto {
+  display: flex;
+  gap: 8px;
+}
+
+.campo__compuesto input { flex: 1 1 auto; min-width: 0; }
+.campo__compuesto select { flex: 0 0 104px; }
 
 .campo__ayuda {
   margin: 5px 0 0;
@@ -356,7 +389,8 @@ input[type="file"] { padding: 8px; background: #fbfcfd; }
 /* ---------- Responsive ------------------------------------------------ */
 @media (max-width: 640px) {
   .grilla { grid-template-columns: 1fr; }
-  .cabecera__titulo { font-size: 20px; }
+  .cabecera__titulo { font-size: 18px; }
+  .cabecera__escudo { width: 40px; }
   .resultado__codigo { font-size: 26px; }
   .bloque { padding: 16px; }
   .acciones .boton { flex: 1 1 auto; }

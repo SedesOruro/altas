@@ -5,15 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Alta Solicitada — SEDES Oruro</title>
 <meta name="description" content="Sistema de notificación de alta solicitada del Servicio Departamental de Salud de Oruro.">
+<link rel="icon" href="assets/membrete.png" type="image/png">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 
 <header class="cabecera">
   <div class="contenedor cabecera__interior">
+    <img class="cabecera__escudo" src="assets/membrete.png" alt="Escudo del Departamento de Oruro">
     <div>
-      <p class="cabecera__institucion">SEDES Oruro — Servicio Departamental de Salud</p>
-      <h1 class="cabecera__titulo">Notificación de Alta Solicitada</h1>
+      <p class="cabecera__institucion">Servicio Departamental de Salud — Oruro</p>
+      <h1 class="cabecera__titulo">Formulario de Notificación de Alta Solicitada</h1>
     </div>
   </div>
 </header>
@@ -53,12 +55,22 @@
       <fieldset class="bloque">
         <legend class="bloque__titulo">1. Datos del Establecimiento de Salud</legend>
         <div class="grilla">
-          <div class="campo">
+          <div class="campo campo--ancho">
             <label for="nombre_establecimiento">Nombre del Establecimiento de Salud <span class="req">*</span></label>
             <input type="text" id="nombre_establecimiento" name="nombre_establecimiento" maxlength="255" autocomplete="off" required>
             <p class="campo__error" data-error-de="nombre_establecimiento"></p>
           </div>
           <div class="campo">
+            <label for="red_salud">Red de Salud <span class="req">*</span></label>
+            <input type="text" id="red_salud" name="red_salud" maxlength="255" autocomplete="off" required>
+            <p class="campo__error" data-error-de="red_salud"></p>
+          </div>
+          <div class="campo">
+            <label for="municipio">Municipio <span class="req">*</span></label>
+            <input type="text" id="municipio" name="municipio" maxlength="255" autocomplete="off" required>
+            <p class="campo__error" data-error-de="municipio"></p>
+          </div>
+          <div class="campo campo--ancho">
             <label for="servicio_unidad">Servicio/Unidad <span class="req">*</span></label>
             <input type="text" id="servicio_unidad" name="servicio_unidad" maxlength="255" autocomplete="off" required>
             <p class="campo__error" data-error-de="servicio_unidad"></p>
@@ -74,6 +86,27 @@
             <label for="nombre_paciente">Nombres y Apellidos <span class="req">*</span></label>
             <input type="text" id="nombre_paciente" name="nombre_paciente" maxlength="255" autocomplete="off" required>
             <p class="campo__error" data-error-de="nombre_paciente"></p>
+          </div>
+          <div class="campo">
+            <label for="edad">Edad <span class="req">*</span></label>
+            <div class="campo__compuesto">
+              <input type="number" id="edad" name="edad" min="0" max="130" step="1" inputmode="numeric" required>
+              <select id="edad_unidad" name="edad_unidad">
+                <option value="anios" selected>años</option>
+                <option value="meses">meses</option>
+                <option value="dias">días</option>
+              </select>
+            </div>
+            <p class="campo__error" data-error-de="edad"></p>
+          </div>
+          <div class="campo">
+            <label for="sexo">Sexo <span class="req">*</span></label>
+            <select id="sexo" name="sexo" required>
+              <option value="">Seleccione…</option>
+              <option value="F">Femenino</option>
+              <option value="M">Masculino</option>
+            </select>
+            <p class="campo__error" data-error-de="sexo"></p>
           </div>
           <div class="campo">
             <label for="numero_historia_clinica">Número de Historia Clínica <span class="req">*</span></label>
@@ -102,6 +135,31 @@
             <input type="date" id="fecha_internacion" name="fecha_internacion" required>
             <p class="campo__error" data-error-de="fecha_internacion"></p>
           </div>
+          <div class="campo">
+            <label for="hora_internacion">Hora de Internación <span class="req">*</span></label>
+            <input type="time" id="hora_internacion" name="hora_internacion" required>
+            <p class="campo__error" data-error-de="hora_internacion"></p>
+          </div>
+          <div class="campo campo--ancho">
+            <label for="diagnosticos_ingreso">Diagnósticos de Ingreso <span class="req">*</span></label>
+            <input type="text" id="diagnosticos_ingreso" name="diagnosticos_ingreso" maxlength="300" autocomplete="off" required>
+            <p class="campo__error" data-error-de="diagnosticos_ingreso"></p>
+          </div>
+          <div class="campo">
+            <label for="fecha_solicitud">Fecha de Alta Solicitada <span class="req">*</span></label>
+            <input type="date" id="fecha_solicitud" name="fecha_solicitud" required>
+            <p class="campo__error" data-error-de="fecha_solicitud"></p>
+          </div>
+          <div class="campo">
+            <label for="hora_solicitud">Hora de Solicitud <span class="req">*</span></label>
+            <input type="time" id="hora_solicitud" name="hora_solicitud" required>
+            <p class="campo__error" data-error-de="hora_solicitud"></p>
+          </div>
+          <div class="campo campo--ancho">
+            <label for="diagnosticos_egreso">Diagnósticos de Egreso <span class="req">*</span></label>
+            <input type="text" id="diagnosticos_egreso" name="diagnosticos_egreso" maxlength="300" autocomplete="off" required>
+            <p class="campo__error" data-error-de="diagnosticos_egreso"></p>
+          </div>
         </div>
       </fieldset>
 
@@ -129,25 +187,22 @@
         <legend class="bloque__titulo">5. Firmas y Fecha</legend>
         <div class="grilla">
           <div class="campo">
-            <label for="fecha_solicitud">Fecha de la Solicitud <span class="req">*</span></label>
-            <input type="date" id="fecha_solicitud" name="fecha_solicitud" required>
-            <p class="campo__error" data-error-de="fecha_solicitud"></p>
+            <label for="grado_parentesco">Grado de Parentesco <span class="opcional">(si firma un representante)</span></label>
+            <input type="text" id="grado_parentesco" name="grado_parentesco" maxlength="120" autocomplete="off"
+                   placeholder="Ej.: madre, hijo, cónyuge">
+            <p class="campo__error" data-error-de="grado_parentesco"></p>
           </div>
           <div class="campo">
-            <label for="hora_solicitud">Hora de la Solicitud <span class="req">*</span></label>
-            <input type="time" id="hora_solicitud" name="hora_solicitud" required>
-            <p class="campo__error" data-error-de="hora_solicitud"></p>
-          </div>
-          <div class="campo">
-            <label for="dni_documento">DNI/Documento de Identidad <span class="req">*</span></label>
-            <input type="text" id="dni_documento" name="dni_documento" maxlength="50" autocomplete="off" required>
-            <p class="campo__error" data-error-de="dni_documento"></p>
+            <label for="ci_pasaporte">N° de Cédula de Identidad/Pasaporte <span class="req">*</span></label>
+            <input type="text" id="ci_pasaporte" name="ci_pasaporte" maxlength="50" autocomplete="off" required>
+            <p class="campo__error" data-error-de="ci_pasaporte"></p>
           </div>
         </div>
         <p class="aviso">
-          Las firmas del paciente/representante legal y del médico tratante <strong>no se
-          capturan digitalmente</strong>: el PDF se imprime con las líneas en blanco y se firma
-          en físico. El documento firmado se sube después en <em>«Subir alta firmada»</em>.
+          Las firmas <strong>no se capturan digitalmente</strong>. El PDF se imprime con tres
+          líneas en blanco —paciente o representante legal, médico, y testigo— para firmarlas
+          y sellarlas en físico. El documento firmado se sube después en
+          <em>«Subir alta firmada»</em>.
         </p>
       </fieldset>
 
@@ -183,7 +238,7 @@
 
     <div class="intro">
       <p>
-        Suba el formato de alta ya firmado en físico (escaneado o fotografiado). El sistema
+        Suba el formulario de alta ya firmado en físico (escaneado o fotografiado). El sistema
         verificará que el código de alta corresponda a una solicitud registrada antes de
         aceptar el archivo.
       </p>

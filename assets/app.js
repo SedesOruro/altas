@@ -161,29 +161,43 @@
 
     var obligatorios = {
       nombre_establecimiento:  'Indique el nombre del establecimiento de salud.',
+      red_salud:               'Indique la red de salud.',
+      municipio:               'Indique el municipio.',
       servicio_unidad:         'Indique el servicio o unidad.',
       nombre_paciente:         'Indique los nombres y apellidos del paciente.',
+      edad:                    'Indique la edad del paciente.',
+      sexo:                    'Seleccione el sexo del paciente.',
       numero_historia_clinica: 'Indique el número de historia clínica.',
       domicilio:               'Indique el domicilio del paciente.',
       fecha_internacion:       'Seleccione la fecha de internación.',
-      motivo_alta:             'Describa el motivo de alta expresado por el paciente.',
-      fecha_solicitud:         'Seleccione la fecha de la solicitud.',
+      hora_internacion:        'Indique la hora de internación.',
+      diagnosticos_ingreso:    'Indique los diagnósticos de ingreso.',
+      fecha_solicitud:         'Seleccione la fecha del alta solicitada.',
       hora_solicitud:          'Indique la hora de la solicitud.',
-      dni_documento:           'Indique el número de documento de identidad.'
+      diagnosticos_egreso:     'Indique los diagnósticos de egreso.',
+      motivo_alta:             'Describa el motivo de alta expresado por el paciente.',
+      ci_pasaporte:            'Indique el número de cédula de identidad o pasaporte.'
     };
 
     Object.keys(obligatorios).forEach(function (nombre) {
       var campo = formAlta.elements[nombre];
-      if (!campo || campo.value.trim() === '') {
+      if (!campo || String(campo.value).trim() === '') {
         marcarError(formAlta, nombre, obligatorios[nombre]);
         ok = false;
       }
     });
 
-    var fi = formAlta.elements.fecha_internacion.value;
-    var fs = formAlta.elements.fecha_solicitud.value;
-    if (ok && fi && fs && fs < fi) {
-      marcarError(formAlta, 'fecha_solicitud', 'La fecha de solicitud no puede ser anterior a la de internación.');
+    var edad = formAlta.elements.edad.value.trim();
+    if (edad !== '' && (!/^\d{1,3}$/.test(edad) || Number(edad) > 130)) {
+      marcarError(formAlta, 'edad', 'La edad debe ser un número entero válido.');
+      ok = false;
+    }
+
+    // El alta no puede producirse antes del ingreso.
+    var ingreso = formAlta.elements.fecha_internacion.value + 'T' + formAlta.elements.hora_internacion.value;
+    var salida  = formAlta.elements.fecha_solicitud.value + 'T' + formAlta.elements.hora_solicitud.value;
+    if (ok && ingreso.length > 11 && salida.length > 11 && salida < ingreso) {
+      marcarError(formAlta, 'fecha_solicitud', 'La fecha y hora del alta no pueden ser anteriores a las de la internación.');
       ok = false;
     }
 
@@ -228,7 +242,8 @@
         var codigo = respuesta.codigo_alta;
         $('#codigo-asignado').textContent = codigo;
         $('#resultado-detalle').textContent =
-          'Paciente: ' + respuesta.registro.nombre_paciente + ' — ' + respuesta.registro.servicio_unidad + '.';
+          'Paciente: ' + respuesta.registro.nombre_paciente + ' — ' +
+          respuesta.registro.servicio_unidad + ', ' + respuesta.registro.nombre_establecimiento + '.';
         $('#btn-descargar-pdf').href = 'generar_pdf.php?codigo=' + encodeURIComponent(codigo);
         $('#btn-ver-pdf').href = 'generar_pdf.php?codigo=' + encodeURIComponent(codigo) + '&modo=inline';
 

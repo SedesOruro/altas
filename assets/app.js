@@ -45,8 +45,17 @@
     if (contenedor) { contenedor.classList.add('campo--invalido'); }
   }
 
+  /** Asigna un valor por defecto y avisa a quien escuche (selector de fecha). */
+  function ponerValor(campo, valor) {
+    if (!campo || campo.value) { return; }
+    campo.value = valor;
+    campo.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
   function enfocarPrimerError(form) {
-    var primero = $('.campo--invalido input, .campo--invalido textarea', form);
+    // Los campos de fecha son <input type="hidden">: se enfoca su botón.
+    var primero = $('.campo--invalido input:not([type="hidden"]), .campo--invalido select, ' +
+                    '.campo--invalido textarea, .campo--invalido .fecha__boton', form);
     if (primero) {
       primero.focus();
       primero.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -98,6 +107,12 @@
   // -------------------------------------------------------------------
   $$('.pestana').forEach(function (btn) {
     btn.addEventListener('click', function () {
+      if (btn.classList.contains('pestana--activa')) { return; }
+
+      // Salir de la pestaña con el formulario abierto equivale a cancelar:
+      // el llenado a medias no se conserva al volver.
+      if (btn.dataset.panel !== 'panel-llenado') { cancelarSolicitudEnCurso(); }
+
       $$('.pestana').forEach(function (b) {
         b.classList.remove('pestana--activa');
         b.setAttribute('aria-selected', 'false');
@@ -127,28 +142,44 @@
     resultadoAlta.hidden = true;
     formAlta.hidden = false;
     // Valores por defecto cómodos: la solicitud casi siempre es de hoy.
-    if (!$('#fecha_solicitud').value) { $('#fecha_solicitud').value = formatoFechaHoy(); }
-    if (!$('#hora_solicitud').value) { $('#hora_solicitud').value = formatoHoraAhora(); }
+    ponerValor($('#fecha_solicitud'), formatoFechaHoy());
+    ponerValor($('#hora_solicitud'), formatoHoraAhora());
     $('#nombre_establecimiento').focus();
   });
 
-  $('#btn-cancelar').addEventListener('click', function () {
+  /** Deja la Sección A como al entrar: solo el botón «Nueva Solicitud de Alta». */
+  function reiniciarSeccionLlenado() {
     formAlta.reset();
+
+    // Los campos de fecha son <input type="hidden"> creados por el selector de
+    // calendario. En un input oculto la propiedad `value` escribe el atributo
+    // `value`, que es justamente el valor por defecto: por eso `reset()` no los
+    // limpia y hay que vaciarlos a mano, avisando con `change` para que el
+    // botón visible del calendario vuelva a su texto inicial.
+    $$('input[type="hidden"]', formAlta).forEach(function (campo) {
+      campo.value = '';
+      campo.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
     limpiarErrores(formAlta);
     ocultarMensaje(mensajeAlta);
     contadorMotivo.textContent = '0';
     formAlta.hidden = true;
-    introLlenado.hidden = false;
-  });
-
-  $('#btn-otra-solicitud').addEventListener('click', function () {
-    formAlta.reset();
-    limpiarErrores(formAlta);
-    ocultarMensaje(mensajeAlta);
-    contadorMotivo.textContent = '0';
     resultadoAlta.hidden = true;
     introLlenado.hidden = false;
-  });
+  }
+
+  /**
+   * Cancela un llenado a medias. Si lo que está a la vista es el resultado de
+   * un alta ya guardada, no se toca: el usuario suele pasar a la Sección B
+   * justamente para subir ese documento.
+   */
+  function cancelarSolicitudEnCurso() {
+    if (!formAlta.hidden) { reiniciarSeccionLlenado(); }
+  }
+
+  $('#btn-cancelar').addEventListener('click', reiniciarSeccionLlenado);
+  $('#btn-otra-solicitud').addEventListener('click', reiniciarSeccionLlenado);
 
   motivo.addEventListener('input', function () {
     contadorMotivo.textContent = String(motivo.value.length);

@@ -36,13 +36,28 @@ body {
   font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 15px;
   line-height: 1.55;
+  -webkit-tap-highlight-color: rgba(15, 76, 129, .15);
+  overflow-wrap: break-word;
 }
+
+/* Bloquea el desplazamiento del fondo mientras el calendario esta abierto. */
+body.sin-scroll { overflow: hidden; }
+
+/* Altura reservada para el pie fijo, para que no tape el ultimo bloque. */
+:root { --alto-pie: 48px; }
+body { padding-bottom: calc(var(--alto-pie) + env(safe-area-inset-bottom)); }
+
+img { max-width: 100%; height: auto; }
 
 .contenedor {
   width: 100%;
   max-width: 940px;
   margin: 0 auto;
-  padding: 0 20px;
+  /* El margen lateral crece con la pantalla y respeta el area segura de los
+     telefonos con muesca. */
+  padding: 0 clamp(14px, 4vw, 20px);
+  padding-left: max(clamp(14px, 4vw, 20px), env(safe-area-inset-left));
+  padding-right: max(clamp(14px, 4vw, 20px), env(safe-area-inset-right));
 }
 
 /* ---------- Cabecera ------------------------------------------------ */
@@ -61,7 +76,7 @@ body {
 }
 
 .cabecera__escudo {
-  width: 54px;
+  width: clamp(38px, 9vw, 54px);
   height: auto;
   flex: 0 0 auto;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35));
@@ -69,7 +84,7 @@ body {
 
 .cabecera__institucion {
   margin: 0;
-  font-size: 12.5px;
+  font-size: clamp(10.5px, 2.6vw, 12.5px);
   letter-spacing: .08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, .82);
@@ -77,8 +92,9 @@ body {
 
 .cabecera__titulo {
   margin: 4px 0 0;
-  font-size: 25px;
+  font-size: clamp(17px, 4.2vw, 25px);
   font-weight: 600;
+  line-height: 1.25;
   letter-spacing: -.01em;
 }
 
@@ -91,17 +107,27 @@ body {
   z-index: 5;
 }
 
-.pestanas__interior { display: flex; gap: 6px; }
+.pestanas__interior {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pestanas__interior::-webkit-scrollbar { display: none; }
 
 .pestana {
   appearance: none;
   border: 0;
   background: transparent;
-  padding: 14px 16px;
+  padding: 13px clamp(10px, 3vw, 16px);
+  min-height: 46px;
   font: inherit;
+  font-size: clamp(13px, 3.4vw, 15px);
   font-weight: 600;
   color: var(--gris);
   cursor: pointer;
+  white-space: nowrap;
   border-bottom: 3px solid transparent;
   margin-bottom: -1px;
 }
@@ -123,7 +149,9 @@ textarea:focus-visible {
 }
 
 /* ---------- Estructura ---------------------------------------------- */
-main { padding: 28px 20px 56px; }
+main {
+  padding: clamp(18px, 4vw, 28px) 0 clamp(18px, 5vw, 28px);
+}
 
 .panel[hidden] { display: none; }
 
@@ -131,7 +159,7 @@ main { padding: 28px 20px 56px; }
   background: var(--blanco);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
-  padding: 20px 22px;
+  padding: clamp(16px, 4vw, 22px);
   box-shadow: var(--sombra);
   margin-bottom: 22px;
 }
@@ -143,8 +171,8 @@ main { padding: 28px 20px 56px; }
   background: var(--blanco);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
-  padding: 18px 22px 22px;
-  margin: 0 0 18px;
+  padding: clamp(14px, 3.5vw, 18px) clamp(14px, 4vw, 22px) clamp(16px, 4vw, 22px);
+  margin: 0 0 16px;
   box-shadow: var(--sombra);
 }
 
@@ -157,10 +185,12 @@ main { padding: 28px 20px 56px; }
 }
 
 /* ---------- Campos --------------------------------------------------- */
+/* Movil primero: una columna. Las dos columnas aparecen cuando hay ancho
+   suficiente para que las etiquetas no se corten (ver «Responsive»). */
 .grilla {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 20px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
 }
 
 .campo--ancho { grid-column: 1 / -1; }
@@ -183,10 +213,14 @@ input[type="file"],
 select,
 textarea {
   width: 100%;
-  padding: 9px 11px;
+  min-height: 44px;            /* objetivo tactil comodo */
+  padding: 10px 12px;
   border: 1px solid var(--borde);
-  border-radius: 6px;
+  border-radius: 8px;
   font: inherit;
+  /* 16px como minimo: por debajo de ese tamano iOS hace zoom automatico al
+     enfocar el campo y descuadra la pagina. */
+  font-size: max(16px, 1rem);
   color: var(--tinta);
   background: var(--blanco);
   transition: border-color .15s ease;
@@ -268,10 +302,13 @@ select {
 
 .boton {
   appearance: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
   border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 10px 18px;
+  border-radius: 8px;
+  padding: 11px 18px;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -335,7 +372,7 @@ select {
   background: var(--blanco);
   border: 2px solid var(--verde);
   border-radius: var(--radio);
-  padding: 22px;
+  padding: clamp(16px, 4vw, 22px);
   box-shadow: var(--sombra);
   text-align: center;
 }
@@ -351,7 +388,7 @@ select {
 
 .resultado__codigo {
   margin: 6px 0 4px;
-  font-size: 34px;
+  font-size: clamp(24px, 7vw, 34px);
   font-weight: 700;
   letter-spacing: .04em;
   font-family: "Consolas", "SFMono-Regular", "Menlo", monospace;
@@ -376,25 +413,275 @@ select {
 .estado-mal  { color: var(--rojo);  font-weight: 600; }
 
 /* ---------- Pie ------------------------------------------------------- */
+/* Anclado al borde inferior de la ventana: con contenido corto (por ejemplo
+   el cuadro del código generado) el pie quedaba a media pantalla, con un
+   hueco vacío debajo. Fijo, siempre cierra la página. */
 .pie {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
   border-top: 1px solid var(--borde);
   background: var(--blanco);
-  padding: 18px 0;
+  padding: 9px 0;
+  padding-bottom: max(9px, env(safe-area-inset-bottom));
+  box-shadow: 0 -2px 10px rgba(16, 30, 50, .06);
 }
 
 .pie p {
   margin: 0;
-  font-size: 13px;
+  font-size: clamp(11px, 3vw, 13px);
+  line-height: 1.35;
   color: var(--gris);
   text-align: center;
 }
 
+/* ---------- Campo de fecha y calendario -------------------------------- */
+/* El campo nativo se sustituye por un boton que abre un calendario propio:
+   el selector de fecha del navegador es muy distinto en cada movil y en
+   varios resulta dificil de usar con el dedo. */
+
+.fecha__boton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--blanco);
+  font: inherit;
+  font-size: max(16px, 1rem);
+  color: var(--tinta);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease;
+}
+
+.fecha__boton:hover { border-color: var(--azul); }
+.fecha__boton--vacio .fecha__valor { color: #93a0ad; }
+.fecha__icono { color: var(--azul); display: flex; flex: 0 0 auto; }
+.campo--invalido .fecha__boton { border-color: var(--rojo); background: #fffafa; }
+
+.calendario__fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(12, 24, 38, .55);
+  animation: aparecer .12s ease-out;
+}
+
+.calendario {
+  width: 100%;
+  max-width: 344px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--blanco);
+  box-shadow: 0 18px 48px rgba(10, 25, 45, .3);
+}
+
+.calendario__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.calendario__selectores {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calendario__selectores select {
+  min-height: 42px;
+  padding: 8px 26px 8px 10px;
+  background-position: right 7px center;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.calendario__mes  { flex: 1 1 auto; min-width: 0; }
+.calendario__anio { flex: 0 0 92px; }
+
+.calendario__nav {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--blanco);
+  color: var(--azul);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.calendario__nav:hover { background: var(--azul-suave); }
+
+.calendario__semana,
+.calendario__dias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.calendario__semana {
+  margin-bottom: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gris);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.calendario__dia {
+  aspect-ratio: 1 / 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.calendario__dia:hover { background: var(--azul-suave); }
+
+.calendario__dia--hoy {
+  box-shadow: inset 0 0 0 1.5px var(--azul);
+  font-weight: 700;
+}
+
+.calendario__dia--elegido {
+  background: var(--azul);
+  color: var(--blanco);
+  font-weight: 700;
+}
+
+.calendario__dia--elegido:hover { background: var(--azul-oscuro); }
+
+.calendario__dia[disabled] {
+  color: #c2cad3;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.calendario__pie {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--borde);
+}
+
+.calendario__atajo,
+.calendario__cerrar {
+  flex: 1 1 0;
+  min-height: 44px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--blanco);
+  font: inherit;
+  font-weight: 600;
+  color: var(--azul);
+  cursor: pointer;
+}
+
+.calendario__atajo:hover,
+.calendario__cerrar:hover { background: var(--azul-suave); }
+
+.calendario__cerrar {
+  color: var(--gris);
+  border-color: transparent;
+  background: #eef1f5;
+}
+
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .calendario__fondo { animation: none; }
+  * { scroll-behavior: auto !important; }
+}
+
 /* ---------- Responsive ------------------------------------------------ */
-@media (max-width: 640px) {
-  .grilla { grid-template-columns: 1fr; }
-  .cabecera__titulo { font-size: 18px; }
-  .cabecera__escudo { width: 40px; }
-  .resultado__codigo { font-size: 26px; }
-  .bloque { padding: 16px; }
-  .acciones .boton { flex: 1 1 auto; }
+/* La hoja está escrita para móvil; estas reglas amplían el diseño cuando
+   hay más espacio, y ajustan los extremos (pantallas muy angostas y
+   móviles en horizontal). */
+
+/* Tabletas y escritorio: dos columnas en los formularios. */
+@media (min-width: 720px) {
+  .grilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+  }
+
+  .campo--ancho { grid-column: 1 / -1; }
+}
+
+/* Móvil: los botones ocupan el ancho completo y se apilan en orden. */
+@media (max-width: 719px) {
+  .campo--ancho { grid-column: auto; }
+
+  .acciones {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .acciones .boton { width: 100%; }
+
+  /* La acción principal queda arriba, al alcance del pulgar. */
+  .resultado .acciones { flex-direction: column; }
+
+  .declaracion { font-size: 13.5px; }
+
+  .bloque__titulo { font-size: 14px; }
+}
+
+/* Pantallas muy angostas (360 px o menos). */
+@media (max-width: 380px) {
+  .campo__compuesto { flex-direction: column; }
+  .campo__compuesto select { flex: 1 1 auto; }
+
+  .calendario { padding: 10px; }
+  .calendario__anio { flex-basis: 70px; }
+  /* Que «Septiembre» quepa entero en el selector de mes. */
+  .calendario__selectores select {
+    font-size: 13px;
+    padding: 8px 20px 8px 7px;
+    background-position: right 5px center;
+    background-size: 9px;
+  }
+  .calendario__nav { width: 34px; font-size: 19px; }
+  .calendario__dia { min-height: 36px; font-size: 14px; }
+  .calendario__pie { flex-wrap: wrap; }
+}
+
+/* Móvil en horizontal: el calendario debe caber sin recortarse. */
+@media (max-height: 520px) {
+  .calendario { max-width: 420px; padding: 10px; }
+  .calendario__dia { min-height: 30px; aspect-ratio: auto; padding: 4px 0; }
+  .calendario__nav { height: 38px; }
+}
+
+/* Impresión: se imprime el PDF, no la pantalla, pero si alguien imprime la
+   página al menos que salga legible. */
+@media print {
+  .pestanas, .intro, .acciones, .pie, .calendario__fondo { display: none !important; }
+  body { padding-bottom: 0; }
+  body { background: var(--blanco); }
+  .bloque { box-shadow: none; break-inside: avoid; }
 }

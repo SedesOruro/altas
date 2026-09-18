@@ -6,7 +6,7 @@
 <title>Alta Solicitada — SEDES Oruro</title>
 <meta name="description" content="Sistema de notificación de alta solicitada del Servicio Departamental de Salud de Oruro.">
 <link rel="icon" href="assets/membrete.png" type="image/png">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=7">
 </head>
 <body>
 
@@ -132,7 +132,8 @@
         <div class="grilla">
           <div class="campo">
             <label for="fecha_internacion">Fecha de Internación <span class="req">*</span></label>
-            <input type="date" id="fecha_internacion" name="fecha_internacion" required>
+            <input type="date" id="fecha_internacion" name="fecha_internacion"
+                   data-marcador="Elegir fecha de internación" required>
             <p class="campo__error" data-error-de="fecha_internacion"></p>
           </div>
           <div class="campo">
@@ -147,7 +148,8 @@
           </div>
           <div class="campo">
             <label for="fecha_solicitud">Fecha de Alta Solicitada <span class="req">*</span></label>
-            <input type="date" id="fecha_solicitud" name="fecha_solicitud" required>
+            <input type="date" id="fecha_solicitud" name="fecha_solicitud"
+                   data-marcador="Elegir fecha del alta" required>
             <p class="campo__error" data-error-de="fecha_solicitud"></p>
           </div>
           <div class="campo">
@@ -291,6 +293,7 @@
   </div>
 </footer>
 
-<script src="assets/app.js"></script>
+<script src="assets/calendario.js?v=7"></script>
+<script src="assets/app.js?v=7"></script>
 </body>
 </html>

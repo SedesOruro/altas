@@ -241,6 +241,33 @@ class PdfAltaSolicitada extends FPDF
     }
 
     /**
+     * Línea de lugar y fecha, alineada a la derecha, tal como encabeza la
+     * firma en los documentos oficiales: «Oruro, 01 de Enero de 2026».
+     *
+     * @param string $lugar     Localidad que se imprime antes de la fecha.
+     * @param string $fechaIso  Fecha en formato AAAA-MM-DD.
+     */
+    public function lugarYFecha($lugar, $fechaIso)
+    {
+        $meses = array('Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre');
+
+        $ts = $fechaIso ? strtotime($fechaIso) : false;
+        if (!$ts) {
+            return;
+        }
+
+        $texto = $lugar . ', ' . date('d', $ts) . ' de '
+               . $meses[(int) date('n', $ts) - 1] . ' de ' . date('Y', $ts);
+
+        $this->Ln(1);
+        $this->Ln(1);
+        $this->SetFont('Helvetica', '', 10);
+        $this->Cell(0, 6, $this->tx($texto), 0, 1, 'R');
+        $this->Ln(1);
+    }
+
+    /**
      * Fila de firmas EN BLANCO repartidas a lo ancho de la página, con
      * espacio vertical suficiente para firmar y sellar sobre el impreso.
      */
@@ -378,10 +405,15 @@ function construir_pdf_alta(array $a)
 
     // ---- 5. Firmas y Fecha --------------------------------------------
     $pdf->seccion('5. Firmas y Fecha:');
+
     $pdf->fila(array(
         array('Grado de Parentesco:', isset($a['grado_parentesco']) ? $a['grado_parentesco'] : ''),
         array('N° de Cédula de Identidad/Pasaporte:', $a['ci_pasaporte']),
     ));
+
+    // Encabezamiento de lugar y fecha, con la fecha en que se solicita el
+    // alta (la que el personal está llenando): «Oruro, 01 de Enero de 2026».
+    $pdf->lugarYFecha('Oruro', $a['fecha_solicitud']);
 
     // Las firmas NO se capturan digitalmente: quedan en blanco para firmarse
     // a mano sobre el documento impreso.

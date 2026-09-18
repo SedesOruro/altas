@@ -120,6 +120,7 @@ DELETE FROM alta_adjuntos; DELETE FROM altas; ALTER TABLE altas AUTO_INCREMENT =
 index.html                 Landing page única (dos secciones, sin recarga)
 assets/style.css           Estilos
 assets/app.js              Validación en cliente y llamadas fetch()
+assets/calendario.js       Selector de fecha táctil que sustituye al campo nativo
 assets/membrete.png        Escudo del Departamento de Oruro (membrete del PDF y de la web)
 
 config.php                 Conexión PDO + constantes de la aplicación
@@ -148,6 +149,24 @@ uploads/altas/             Documentos firmados subidos (+ .htaccess de protecci�
 data/                      Contadores del limitador de intentos (se crea sola)
 templates/                 Documentación de la Opción B (plantilla .docx)
 ```
+
+---
+
+## Interfaz
+
+La página está diseñada para móvil primero y se adapta a tableta y escritorio: una sola
+columna hasta 719 px y dos columnas desde 720 px, con controles de al menos 44 px de alto y
+texto de 16 px en los campos (por debajo de ese tamaño iOS hace zoom automático al escribir).
+
+Los campos de fecha **no usan el selector nativo del navegador**, cuyo comportamiento en móvil
+cambia mucho de un equipo a otro. `assets/calendario.js` los convierte en un botón que muestra
+la fecha en formato `dd/mm/aaaa` y abre un calendario propio con selectores de mes y año,
+cuadrícula de días táctil y atajos «Hoy» y «Ayer». El `<input>` original se conserva como
+`hidden`, así que el envío y la validación no cambian.
+
+> **Al publicar cambios en el CSS o el JavaScript**, suba el número de versión de
+> `?v=` en las tres referencias de `index.html`. Sin eso, los navegadores que ya visitaron
+> la página pueden seguir usando la copia guardada en caché.
 
 ---
 

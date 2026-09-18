@@ -1,0 +1,16 @@
+# Credenciales y datos locales: nunca deben entrar en la imagen.
+config.local.php
+data/
+uploads/altas/*
+!uploads/altas/.htaccess
+
+# Control de versiones y herramientas locales
+.git
+.gitignore
+.github
+.claude
+node_modules
+
+# Documentacion y utilidades que no hacen falta en el servidor
+*.log
+*.zip

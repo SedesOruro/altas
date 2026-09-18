@@ -40,6 +40,11 @@ estos scripts son ese puente, nada más.
 
 ## Instalación
 
+> **¿Va a desplegar en CapRover?** Siga [`DEPLOY.md`](DEPLOY.md), que cubre la imagen Docker,
+> los directorios persistentes para los documentos subidos, las variables de entorno, el
+> dominio `https://altas.app.sedesoruro.gob.bo` y los respaldos. Esta sección describe la
+> instalación en un hosting compartido clásico (cPanel, FTP).
+
 ### 1. Crear la base de datos e importar el esquema
 
 Desde phpMyAdmin: crear una base de datos (por ejemplo `sedes_altas`) con cotejamiento
@@ -85,8 +90,9 @@ define('APP_DEBUG', false);   // false en producción
 ```
 
 `config.local.php` **no se versiona** (está en `.gitignore`). Si el hosting permite variables
-de entorno (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`), estas tienen prioridad y
-el archivo no es necesario.
+de entorno (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `APP_DEBUG`,
+`APP_TIMEZONE`), estas tienen prioridad y el archivo no es necesario — así funciona el
+despliegue en CapRover.
 
 ### 3. Subir los archivos
 
@@ -131,6 +137,13 @@ lib/fpdf/                  Librería FPDF 1.86 (incluida, sin Composer)
 
 schema.sql                 Creación de las tablas MySQL (instalación nueva)
 migracion_v1_a_v2.sql      Actualización de una base ya instalada con el formato anterior
+
+DEPLOY.md                  Guía de despliegue en CapRover
+Dockerfile                 Imagen Apache + mod_php para el despliegue en contenedor
+captain-definition         Archivo que CapRover usa para construir la imagen
+docker/apache-altas.conf   Configuración y reglas de seguridad de Apache
+docker/php-altas.ini       Límites de subida, zona horaria y manejo de errores
+docker/entrypoint.sh       Ajusta permisos de los volúmenes antes de arrancar Apache
 uploads/altas/             Documentos firmados subidos (+ .htaccess de protección)
 data/                      Contadores del limitador de intentos (se crea sola)
 templates/                 Documentación de la Opción B (plantilla .docx)

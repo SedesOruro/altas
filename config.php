@@ -21,7 +21,12 @@ if (is_readable($__localConfig)) {
 
 function cfg($clave, $porDefecto = null)
 {
+    // getenv() cubre las variables del entorno del contenedor; $_SERVER cubre
+    // el caso de Apache con PassEnv, donde algunas SAPI no las exponen en getenv().
     $env = getenv($clave);
+    if (($env === false || $env === '') && isset($_SERVER[$clave])) {
+        $env = $_SERVER[$clave];
+    }
     if ($env !== false && $env !== '') {
         return $env;
     }
@@ -31,10 +36,24 @@ function cfg($clave, $porDefecto = null)
     return $porDefecto;
 }
 
+/**
+ * Lee un valor booleano de configuración. Necesario porque una variable de
+ * entorno siempre llega como texto y (bool) "false" sería true, lo que
+ * dejaría el modo depuración encendido en producción.
+ */
+function cfg_bool($clave, $porDefecto = false)
+{
+    $valor = cfg($clave, $porDefecto);
+    if (is_bool($valor)) {
+        return $valor;
+    }
+    return !in_array(strtolower(trim((string) $valor)), array('', '0', 'false', 'off', 'no'), true);
+}
+
 // ---------------------------------------------------------------------
 // 2) Constantes de la aplicacion
 // ---------------------------------------------------------------------
-define('APP_DEBUG_MODE', (bool) cfg('APP_DEBUG', false));
+define('APP_DEBUG_MODE', cfg_bool('APP_DEBUG', false));
 
 /** Carpeta fisica donde se guardan los documentos firmados escaneados. */
 define('UPLOAD_DIR', __DIR__ . '/uploads/altas');
@@ -63,7 +82,7 @@ if (APP_DEBUG_MODE) {
 }
 ini_set('log_errors', '1');
 
-date_default_timezone_set('America/La_Paz');
+date_default_timezone_set(cfg('APP_TIMEZONE', 'America/La_Paz'));
 
 // ---------------------------------------------------------------------
 // 4) Conexion PDO (perezosa: se abre solo cuando se necesita)

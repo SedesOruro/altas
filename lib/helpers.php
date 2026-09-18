@@ -53,8 +53,10 @@ function limpiar_texto($valor, $maxLongitud = 255)
     }
     $valor = (string) $valor;
     // Elimina caracteres de control salvo saltos de linea y tabulaciones.
-    $valor = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $valor);
-    $valor = trim($valor);
+    // Con UTF-8 invalido preg_replace devuelve null; en PHP 8 pasar null a
+    // trim() esta obsoleto, asi que en ese caso se descarta la entrada.
+    $limpio = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $valor);
+    $valor  = trim($limpio === null ? '' : $limpio);
     if (function_exists('mb_substr')) {
         return mb_substr($valor, 0, $maxLongitud, 'UTF-8');
     }

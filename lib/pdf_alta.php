@@ -244,12 +244,12 @@ class PdfAltaSolicitada extends FPDF
      * Fila de firmas EN BLANCO repartidas a lo ancho de la página, con
      * espacio vertical suficiente para firmar y sellar sobre el impreso.
      */
-    public function filaFirmas(array $etiquetas, $espacioSuperior = 11)
+    public function filaFirmas(array $etiquetas, $espacioSuperior = 24)
     {
-        $alturaNecesaria = $espacioSuperior + 8;
+        $alturaNecesaria = $espacioSuperior + 10;
         if ($this->GetY() + $alturaNecesaria > ($this->h - $this->bMargin)) {
             $this->AddPage();
-            $espacioSuperior = 6;
+            $espacioSuperior = 14;
         }
 
         $this->Ln($espacioSuperior);
@@ -389,7 +389,7 @@ function construir_pdf_alta(array $a)
         'Firma del Paciente/Representante Legal',
         'Firma y Sello del Médico',
         'Firma Testigo',
-    ), 11);
+    ), 24);
 
     // ---- Nota importante ----------------------------------------------
     $pdf->Ln(4);

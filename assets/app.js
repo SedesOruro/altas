@@ -248,8 +248,9 @@
         $('#btn-ver-pdf').href = 'generar_pdf.php?codigo=' + encodeURIComponent(codigo) + '&modo=inline';
 
         formAlta.hidden = true;
+        introLlenado.hidden = true;
         resultadoAlta.hidden = false;
-        resultadoAlta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         // Precarga el código en la sección de subida, para comodidad.
         $('#codigo_alta').value = codigo;

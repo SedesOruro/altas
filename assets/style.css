@@ -22,6 +22,11 @@
 
 * { box-sizing: border-box; }
 
+/* El atributo `hidden` manda sobre cualquier `display` de las clases: sin esto,
+   reglas como `.formulario { display: block }` dejan visible lo que el
+   JavaScript intenta ocultar. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -133,8 +138,6 @@ main { padding: 28px 20px 56px; }
 
 .intro p { margin: 0 0 14px; color: var(--gris); }
 .intro p:last-child { margin-bottom: 0; }
-
-.formulario { display: block; }
 
 .bloque {
   background: var(--blanco);

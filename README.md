@@ -6,14 +6,21 @@ paciente que decide retirarse de un establecimiento de salud bajo su propia resp
 El PDF reproduce el formulario oficial con su **membrete institucional**: el escudo del
 Departamento de Oruro y la leyenda «SERVICIO DEPARTAMENTAL DE SALUD - ORURO».
 
-Una sola página web con dos funciones:
+El sistema tiene dos caras:
 
-1. **Llenado de información** — se completa el formulario, el sistema asigna un
-   **código de alta correlativo único** (`ALTA-000001`) y genera el **PDF** con el formato
-   oficial, listo para imprimir y firmar en físico.
-2. **Subir alta firmada** — se sube el documento ya firmado (PDF o JPG). El sistema valida
-   que el código de alta corresponda a una solicitud registrada antes de aceptar el archivo,
-   y marca el registro como `verificado`.
+**Pública** — `index.html` es la portada de presentación, con el botón **«Registro de Altas»**
+que lleva al formulario (`registro_altas.html`), donde el personal de salud:
+
+1. **Llena la información** — el sistema asigna un **código de alta correlativo único**
+   (`ALTA-000001`) y genera el **PDF** con el formato oficial, listo para imprimir y firmar
+   en físico.
+2. **Sube el alta firmada** — se carga el documento ya firmado (PDF o JPG). El sistema valida
+   que el código corresponda a una solicitud registrada antes de aceptar el archivo, y marca
+   el registro como `verificado`.
+
+**Privada** — el botón **«Inicio de Sesión»** de la portada abre el panel de administración
+(AdminLTE), con el listado completo de altas —filtros, paginación y acceso a ambos PDF de
+cada registro— y la gestión de los usuarios que pueden entrar.
 
 ---
 
@@ -33,8 +40,13 @@ estos scripts son ese puente, nada más.
 | PDF | [FPDF](http://www.fpdf.org) 1.86, incluido en `lib/fpdf/` | Un solo archivo, sin Composer, sin `shell_exec`, sin LibreOffice |
 | Frontend | HTML + CSS + JavaScript sin frameworks | Sin build, se sube tal cual |
 
-**Requisitos del servidor:** PHP 5.6 o superior (probado en 7.4) con las extensiones
+| Panel | [AdminLTE 3.2](https://adminlte.io) + Bootstrap 4, incluidos en `assets/vendor/` | Sin CDN: funciona en una intranet sin salida a internet |
+
+**Requisitos del servidor:** PHP 7.3 o superior (probado en 7.4 y 8.3) con las extensiones
 `pdo_mysql`, `fileinfo` y `mbstring` (o `iconv`), y acceso a un servidor MySQL 5.7+ / MariaDB.
+
+> PHP 7.3 es el mínimo por las cookies de sesión del panel (`SameSite`). El formulario
+> público por sí solo funciona desde PHP 5.6.
 
 ---
 
@@ -65,12 +77,15 @@ migración, que conserva los registros existentes y añade los campos del formul
 Grado de parentesco, y el cambio de «DNI/Documento» a «Cédula de Identidad/Pasaporte»):
 
 ```bash
-mysqldump -u USUARIO -p sedes_altas > respaldo_antes_v2.sql
-mysql -u USUARIO -p sedes_altas < migracion_v1_a_v2.sql
+mysqldump -u USUARIO -p sedes_altas > respaldo_antes_de_migrar.sql
+mysql -u USUARIO -p sedes_altas < migracion_v1_a_v2.sql   # campos del formulario nuevo
+mysql -u USUARIO -p sedes_altas < migracion_v2_a_v3.sql   # tabla de usuarios del panel
 ```
 
 Las filas anteriores quedan con valores provisionales visibles (`(no registrado)`, edad `0`)
 en los campos que antes no existían; corríjalos a mano si esos registros aún se usan.
+
+Si ya tenía la versión 2 instalada, solo hace falta `migracion_v2_a_v3.sql`.
 
 ### 2. Configurar la conexión
 
@@ -103,10 +118,21 @@ el dominio o subdominio a ella. No hay nada que compilar ni que arrancar.
 servidor web (normalmente `755`, o `775` si el propietario difiere). La carpeta `data/`
 (usada por el limitador de intentos) se crea sola con los mismos requisitos.
 
-### 4. Comprobación
+### 4. Crear el primer usuario del panel
+
+Abrir `registro.php` en el navegador y completar el formulario. **Esa página solo está
+abierta mientras no exista ningún usuario**: creado el primero, exige haber iniciado sesión,
+de modo que las cuentas posteriores las dan de alta quienes ya tienen acceso.
+
+Es deliberado: el panel muestra datos clínicos identificables, y un registro público
+equivaldría a repartir las llaves. Si en su caso prefiere un registro abierto, quite la
+comprobación de `$registroAbierto` en `registro.php`.
+
+### 5. Comprobación
 
 Abrir la página, registrar una solicitud de prueba, descargar el PDF y subir ese mismo PDF en
-la sección «Subir alta firmada». Después, borrar el registro de prueba:
+la sección «Subir alta firmada». Entrar luego al panel y comprobar que la fila aparece con sus
+dos botones de PDF. Después, borrar el registro de prueba:
 
 ```sql
 DELETE FROM alta_adjuntos; DELETE FROM altas; ALTER TABLE altas AUTO_INCREMENT = 1;
@@ -117,10 +143,24 @@ DELETE FROM alta_adjuntos; DELETE FROM altas; ALTER TABLE altas AUTO_INCREMENT =
 ## Estructura de archivos
 
 ```
-index.html                 Landing page única (dos secciones, sin recarga)
+index.html                 Portada pública de presentación
+registro_altas.html        Formulario de altas (llenado + subida del firmado)
+login.php                  Inicio de sesión del panel
+registro.php               Alta de usuarios del panel
+salir.php                  Cierre de sesión
+
+admin/index.php            Panel: tabla de altas con filtros y paginación
+admin/usuarios.php         Panel: listado y activación de usuarios
+admin/listar_altas.php     GET   → JSON con las altas filtradas y paginadas
+admin/ver_adjunto.php      GET   → entrega el documento firmado (exige sesión)
+admin/_plantilla.php       Armazón AdminLTE común a las páginas del panel
+
 assets/style.css           Estilos
 assets/app.js              Validación en cliente y llamadas fetch()
 assets/calendario.js       Selector de fecha táctil que sustituye al campo nativo
+assets/admin.css           Ajustes propios sobre AdminLTE
+assets/admin.js            Tabla del panel: filtros, paginación y botones
+assets/vendor/             AdminLTE 3.2, Bootstrap 4 y jQuery (sin CDN)
 assets/membrete.png        Escudo del Departamento de Oruro (membrete del PDF y de la web)
 
 config.php                 Conexión PDO + constantes de la aplicación
@@ -132,12 +172,14 @@ generar_pdf.php            GET   → devuelve el PDF del formato
 verificar_codigo.php       GET   → informa si un código de alta existe
 subir_adjunto.php          POST  → recibe y registra el documento firmado
 
+lib/auth.php               Sesiones, contraseñas, CSRF y guardias del panel
 lib/helpers.php            Respuestas JSON, validación, limitador de intentos
 lib/pdf_alta.php           Maquetación del PDF (fidelidad al formato Word)
 lib/fpdf/                  Librería FPDF 1.86 (incluida, sin Composer)
 
 schema.sql                 Creación de las tablas MySQL (instalación nueva)
-migracion_v1_a_v2.sql      Actualización de una base ya instalada con el formato anterior
+migracion_v1_a_v2.sql      Actualización de la v1 al formulario nuevo
+migracion_v2_a_v3.sql      Agrega la tabla de usuarios del panel
 
 DEPLOY.md                  Guía de despliegue en CapRover
 Dockerfile                 Imagen Apache + mod_php para el despliegue en contenedor
@@ -167,6 +209,41 @@ cuadrícula de días táctil y atajos «Hoy» y «Ayer». El `<input>` original 
 > **Al publicar cambios en el CSS o el JavaScript**, suba el número de versión de
 > `?v=` en las tres referencias de `index.html`. Sin eso, los navegadores que ya visitaron
 > la página pueden seguir usando la copia guardada en caché.
+
+---
+
+## Panel de administración
+
+Se entra desde el botón **«Inicio de Sesión»** de la portada. Está construido con
+**AdminLTE 3**, con sus archivos incluidos en `assets/vendor/`: no se carga nada desde una
+CDN, así que el panel funciona igual en una intranet sin salida a internet. Los iconos son
+SVG en línea, para no arrastrar una tipografía de iconos entera.
+
+**Altas registradas** muestra la tabla con todos los campos del formulario. Tiene búsqueda
+por código, paciente, historia clínica o cédula; filtros por estado y por rango de fechas de
+alta; y paginación de 10 a 100 filas. La columna **Opciones** queda fija al desplazarse en
+horizontal y trae dos botones por fila:
+
+- **PDF registrado** — el documento que generó el formulario.
+- **PDF subido** — el escaneo firmado que se cargó después; aparece deshabilitado mientras
+  no exista.
+
+**Usuarios** lista las cuentas y permite activarlas o desactivarlas. Las cuentas no se
+borran: una cuenta eliminada dejaría sin explicación los accesos ya registrados, y
+desactivarla cumple la misma función.
+
+### Seguridad del panel
+
+- Contraseñas con `password_hash()` (bcrypt); en la base nunca hay texto plano.
+- Cookie de sesión `HttpOnly` y `SameSite=Lax`, y `Secure` cuando la visita llega por HTTPS
+  (se detecta también detrás del proxy de CapRover, por `X-Forwarded-Proto`).
+- El identificador de sesión se regenera al autenticarse, contra la fijación de sesión.
+- Testigo anti-CSRF en los formularios de login, registro y cambios de estado.
+- Límite de intentos por IP en el login y en el registro.
+- Un login fallido responde siempre lo mismo, exista o no el usuario.
+- **Los documentos firmados no se sirven desde una URL pública.** La carpeta `uploads/` está
+  denegada por HTTP y los archivos se entregan únicamente desde `admin/ver_adjunto.php`,
+  que exige sesión. PHP los lee del disco, así que la restricción no afecta al panel.
 
 ---
 

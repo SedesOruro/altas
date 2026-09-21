@@ -82,6 +82,33 @@ img { max-width: 100%; height: auto; }
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35));
 }
 
+.cabecera__texto { flex: 1 1 auto; min-width: 0; }
+
+/* Enlaces de la cabecera: acceso al panel y vuelta a la portada. */
+.cabecera__acceso,
+.cabecera__volver {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.cabecera__volver {
+  color: rgba(255, 255, 255, .9);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 8px 4px;
+}
+
+.cabecera__volver:hover { color: var(--blanco); text-decoration: underline; }
+
+.boton--claro {
+  background: var(--blanco);
+  color: var(--azul);
+  border-color: var(--blanco);
+}
+
+.boton--claro:hover { background: var(--azul-suave); }
+
 .cabecera__institucion {
   margin: 0;
   font-size: clamp(10.5px, 2.6vw, 12.5px);
@@ -614,6 +641,133 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .calendario__fondo { animation: none; }
   * { scroll-behavior: auto !important; }
+}
+
+/* ---------- Portada ---------------------------------------------------- */
+/* La portada no lleva el pie fijo: es una pagina de lectura, y ahi el pie
+   debe quedarse al final del contenido. */
+body.portada { padding-bottom: 0; }
+
+.pie--portada { position: static; box-shadow: none; margin-top: 8px; }
+
+.portada__hero {
+  background: linear-gradient(180deg, var(--azul-suave) 0%, var(--fondo) 100%);
+  border-bottom: 1px solid var(--borde);
+  padding: clamp(32px, 9vw, 64px) 0 clamp(28px, 7vw, 52px);
+  text-align: center;
+}
+
+.portada__titulo {
+  margin: 0 0 12px;
+  font-size: clamp(22px, 5.5vw, 34px);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--azul-oscuro);
+}
+
+.portada__bajada {
+  max-width: 640px;
+  margin: 0 auto 24px;
+  font-size: clamp(14.5px, 3.6vw, 17px);
+  color: var(--gris);
+}
+
+.portada__acciones {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.boton--grande {
+  padding: 14px 34px;
+  font-size: clamp(15px, 4vw, 17px);
+  min-height: 52px;
+}
+
+.portada__nota {
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: var(--gris);
+}
+
+.portada__seccion { padding: clamp(26px, 6vw, 44px) 20px; }
+
+.portada__subtitulo {
+  margin: 0 0 18px;
+  font-size: clamp(17px, 4.2vw, 21px);
+  font-weight: 700;
+  color: var(--azul-oscuro);
+}
+
+/* Los tres pasos del circuito. */
+.pasos {
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+}
+
+.paso {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 18px 20px;
+  box-shadow: var(--sombra);
+}
+
+.paso__numero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--azul);
+  color: var(--blanco);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.paso__titulo {
+  margin: 10px 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.paso p { margin: 0; color: var(--gris); font-size: 14px; }
+
+.tarjeta-info {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: clamp(18px, 4vw, 24px);
+  box-shadow: var(--sombra);
+}
+
+.tarjeta-info p { color: var(--gris); margin: 0 0 12px; }
+
+.tarjeta-info__aviso {
+  margin: 0;
+  padding: 12px 14px;
+  background: #fff8e6;
+  border: 1px solid #f0dca8;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: #6b5312 !important;
+}
+
+@media (min-width: 720px) {
+  .pasos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 519px) {
+  /* En pantalla angosta el boton de acceso pasa debajo del titulo. */
+  .cabecera__interior { flex-wrap: wrap; }
+  .cabecera__acceso { width: 100%; }
 }
 
 /* ---------- Responsive ------------------------------------------------ */

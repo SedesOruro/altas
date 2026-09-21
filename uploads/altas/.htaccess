@@ -1,4 +1,10 @@
-# Impide que cualquier archivo subido sea ejecutado como PHP
+# Los documentos firmados NO se sirven directamente por HTTP: se entregan
+# desde admin/ver_adjunto.php, que exige haber iniciado sesion. PHP lee el
+# archivo del disco, asi que esta restriccion no afecta al panel.
+Require all denied
+
+# Segunda barrera por si el servidor ignorara la regla anterior: ningun
+# archivo subido puede ejecutarse como script.
 php_flag engine off
 <IfModule mod_php7.c>
     php_flag engine off

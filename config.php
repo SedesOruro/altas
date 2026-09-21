@@ -7,9 +7,9 @@
  *   2. Archivo config.local.php (no versionado)
  */
 
-if (session_status() === PHP_SESSION_NONE) {
-    @session_start();
-}
+// La sesión NO se arranca aquí: solo la usa el panel de administración, y
+// lib/auth.php la inicia con parámetros de cookie endurecidos (HttpOnly,
+// SameSite y Secure detrás de HTTPS). Arrancarla antes los anularía.
 
 // ---------------------------------------------------------------------
 // 1) Carga de credenciales

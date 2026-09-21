@@ -1,0 +1,148 @@
+/* =====================================================================
+   Ajustes propios sobre AdminLTE — panel de Alta Solicitada
+   Solo lo imprescindible: el resto lo resuelve la plantilla.
+   ===================================================================== */
+
+:root {
+  --azul-sedes: #0f4c81;
+}
+
+body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+/* ---------- Marca y menú ---------------------------------------------- */
+.brand-link { display: flex; align-items: center; gap: 9px; padding: 12px 14px; }
+.brand-image { width: 30px; height: auto; opacity: 1; margin: 0; }
+.brand-text { font-size: 15px; font-weight: 600; }
+
+.sidebar-dark-primary { background-color: #0b3c66; }
+.nav-sidebar .nav-link { display: flex; align-items: center; gap: 10px; }
+.nav-sidebar .nav-link p { margin: 0; }
+.nav-sidebar .nav-link.active { background-color: var(--azul-sedes); }
+
+.icono { flex: 0 0 auto; vertical-align: -3px; }
+
+/* Botón de menú dibujado con CSS, para no depender de una tipografía de iconos. */
+.hamburguesa {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #495057;
+  position: relative;
+}
+.hamburguesa::before,
+.hamburguesa::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 2px;
+  background: #495057;
+}
+.hamburguesa::before { top: -6px; }
+.hamburguesa::after  { top: 6px; }
+
+.titulo-pagina { font-size: 20px; font-weight: 600; margin: 0; }
+.content-header { padding: 14px 0.5rem 6px; }
+
+/* ---------- Filtros ---------------------------------------------------- */
+.filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.filtros .form-group { margin-bottom: 0; }
+.filtros label { font-size: 12.5px; font-weight: 600; margin-bottom: 3px; }
+.filtros__buscar { grid-column: span 2; min-width: 0; }
+.filtros__acciones { display: flex; align-items: flex-end; }
+
+@media (max-width: 575px) {
+  .filtros { grid-template-columns: 1fr; }
+  .filtros__buscar { grid-column: auto; }
+}
+
+/* ---------- Tabla ------------------------------------------------------ */
+/* Son 22 columnas: la tabla se desplaza en horizontal y la cabecera queda
+   fija arriba mientras se recorre el listado. */
+.tabla-visual { max-height: 62vh; overflow: auto; }
+
+.tabla-visual table { font-size: 12.5px; margin-bottom: 0; }
+
+.tabla-visual thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f6f9;
+  border-bottom: 2px solid #dee2e6;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.celda-larga {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.celda-codigo {
+  font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* La columna de opciones acompaña el desplazamiento horizontal. */
+.celda-opciones,
+#tabla-altas thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  white-space: nowrap;
+  border-right: 2px solid #dee2e6;
+}
+
+#tabla-altas thead th:first-child { z-index: 3; background: #f4f6f9; }
+.table-hover tbody tr:hover .celda-opciones { background: #f2f6fb; }
+
+.btn-xs { padding: 2px 7px; font-size: 11.5px; line-height: 1.5; border-radius: 3px; }
+
+/* ---------- Paginación -------------------------------------------------- */
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.paginacion__resumen { font-size: 13px; color: #6c757d; }
+
+/* ---------- Páginas de acceso ------------------------------------------- */
+.pagina-acceso {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: #eef2f6;
+}
+
+.caja-acceso { width: 100%; max-width: 430px; }
+.caja-acceso--ancha { max-width: 620px; }
+
+.acceso-marca { text-align: center; margin-bottom: 18px; }
+.acceso-marca img { width: 62px; height: auto; }
+.acceso-marca h1 { font-size: 19px; font-weight: 600; margin: 10px 0 2px; color: #1c2530; }
+.acceso-marca p { font-size: 12.5px; color: #6c757d; margin: 0; text-transform: uppercase; letter-spacing: .06em; }
+
+.caja-acceso .card { border-top: 3px solid var(--azul-sedes); }
+.caja-acceso .btn-primary { background-color: var(--azul-sedes); border-color: var(--azul-sedes); }
+.caja-acceso .form-control { min-height: 42px; }
+.caja-acceso label { font-weight: 600; font-size: 13px; }
+
+.enlace-pie { text-align: center; margin-top: 14px; font-size: 13px; }

@@ -51,7 +51,7 @@ persistentes)**: sin él, cada nuevo despliegue borraría todos los archivos sub
 |---|---|
 | `captain-definition` | Le indica a CapRover que construya con el `Dockerfile` |
 | `Dockerfile` | Imagen `php:8.3-apache` con `pdo_mysql` y la app en `/var/www/html` |
-| `docker/apache-altas.conf` | Configuración y reglas de seguridad de Apache |
+| `docker/apache-altas.conf` | Configuración y reglas de seguridad de Apache (incluye el cierre de `uploads/`) |
 | `docker/php-altas.ini` | Límites de subida, zona horaria, errores al log |
 | `docker/entrypoint.sh` | Da permisos de escritura a los volúmenes antes de arrancar Apache |
 | `.dockerignore` | Evita que `config.local.php`, `data/` y los adjuntos locales entren en la imagen |
@@ -145,12 +145,13 @@ CapRover creará los volúmenes en el servidor, normalmente bajo
 `docker/entrypoint.sh` incluido resuelve esto en cada arranque: crea las carpetas si faltan y
 les ajusta el propietario y los permisos. No hay que hacer nada manualmente.
 
-**Seguridad de la carpeta de subidas.** El repositorio trae un `uploads/altas/.htaccess` que
-impide ejecutar archivos subidos, pero **al montar el volumen ese archivo queda oculto bajo
-el punto de montaje**. Por eso las mismas reglas están duplicadas en
-`docker/apache-altas.conf`, que vive en la imagen y siempre se aplica: dentro de `/uploads`
-el motor PHP está apagado, los handlers de script removidos y el listado de directorio
-desactivado. Un `.php` disfrazado de PDF no puede ejecutarse.
+**Seguridad de la carpeta de subidas.** El repositorio trae un `uploads/altas/.htaccess` con
+las reglas de protección, pero **al montar el volumen ese archivo queda oculto bajo el punto
+de montaje**. Por eso las mismas reglas están duplicadas en `docker/apache-altas.conf`, que
+vive en la imagen y siempre se aplica: la carpeta está denegada por HTTP, el motor PHP
+apagado, los handlers de script removidos y el listado de directorio desactivado. Un `.php`
+disfrazado de PDF no puede ejecutarse, y los escaneos firmados solo se ven desde el panel,
+con sesión iniciada.
 
 ---
 
@@ -280,13 +281,21 @@ docker exec -i $(docker ps -qf name=srv-captain--mysql) \
 
 ### Si ya existía una instalación con el formato anterior
 
-No importe `schema.sql`: usaría tablas nuevas y perdería los registros. Ejecute la migración,
-que conserva los datos:
+No importe `schema.sql`: usaría tablas nuevas y perdería los registros. Ejecute las
+migraciones, que conservan los datos:
 
 ```bash
-mysqldump -u root -p sedes_altas > respaldo_antes_v2.sql
-mysql -u root -p sedes_altas < migracion_v1_a_v2.sql
+mysqldump -u root -p sedes_altas > respaldo_antes_de_migrar.sql
+mysql -u root -p sedes_altas < migracion_v1_a_v2.sql   # campos del formulario nuevo
+mysql -u root -p sedes_altas < migracion_v2_a_v3.sql   # tabla de usuarios del panel
 ```
+
+### Crear el primer usuario del panel
+
+Con la base ya lista, abra `https://altas.app.sedesoruro.gob.bo/registro.php` y cree la
+cuenta del administrador. **Hágalo en cuanto el sitio esté publicado**: esa página solo está
+abierta mientras no exista ningún usuario, y creado el primero exige haber iniciado sesión.
+Dejarla sin usar es dejar la puerta entornada.
 
 ---
 
@@ -312,16 +321,21 @@ Recorra esta lista después del primer despliegue:
 
    Si el archivo desapareció, los directorios persistentes no quedaron bien configurados:
    vuelva al paso 4.
-6. **Las carpetas internas están cerradas.** Estas URLs deben devolver **403 Forbidden**:
+6. **El panel funciona.** Entre con el usuario creado, compruebe que la fila de prueba
+   aparece en la tabla y que sus dos botones de PDF abren los documentos correctos.
+7. **Las carpetas internas están cerradas.** Estas URLs deben devolver **403 Forbidden**:
 
    ```
    https://altas.app.sedesoruro.gob.bo/data/
+   https://altas.app.sedesoruro.gob.bo/uploads/altas/
    https://altas.app.sedesoruro.gob.bo/schema.sql
    https://altas.app.sedesoruro.gob.bo/config.local.php
-   https://altas.app.sedesoruro.gob.bo/lib/helpers.php
+   https://altas.app.sedesoruro.gob.bo/lib/auth.php
    ```
 
-7. **Borre los datos de prueba** cuando termine:
+   Los documentos firmados solo deben abrirse desde el panel, con sesión iniciada.
+
+8. **Borre los datos de prueba** cuando termine:
 
    ```sql
    DELETE FROM alta_adjuntos; DELETE FROM altas; ALTER TABLE altas AUTO_INCREMENT = 1;
@@ -400,11 +414,15 @@ docker exec -it $(docker ps -qf name=srv-captain--altas) bash
 ## Nota final sobre protección de datos
 
 El sistema almacena datos clínicos identificables (nombre, edad, sexo, historia clínica,
-domicilio, cédula de identidad, diagnósticos y motivo del alta) y **no tiene control de
-usuarios propio**: cualquiera que alcance la URL puede registrar altas y consultar si un
-código existe.
+domicilio, cédula de identidad, diagnósticos y motivo del alta).
 
-Antes de ponerlo en producción, considere al menos una de estas medidas:
+El **panel de administración** exige usuario y contraseña, y los documentos firmados solo se
+entregan con sesión iniciada: la carpeta `uploads/` está denegada por HTTP y los archivos
+salen únicamente desde `admin/ver_adjunto.php`.
+
+El **formulario público**, en cambio, no tiene control de usuarios: cualquiera que alcance la
+URL puede registrar altas y consultar si un código existe. Para esa parte, considere al menos
+una de estas medidas antes de ponerlo en producción:
 
 - Restringir el acceso por IP o por red institucional desde
   **App Configs → Custom Nginx Configuration** (`allow` / `deny`).

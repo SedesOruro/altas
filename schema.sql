@@ -1,11 +1,12 @@
 -- =====================================================================
 -- Sistema "Alta Solicitada" - SEDES Oruro
--- Esquema de base de datos MySQL  (v2 - Formulario con membrete)
+-- Esquema de base de datos MySQL  (v3 - Formulario con membrete + panel)
 -- Importar con: mysql -u USUARIO -p NOMBRE_BD < schema.sql
 -- o desde phpMyAdmin -> Importar.
 --
--- Si ya tiene instalada la version 1, NO ejecute este archivo:
--- use migracion_v1_a_v2.sql, que conserva los registros existentes.
+-- Si ya tiene una version anterior instalada, NO ejecute este archivo:
+-- use migracion_v1_a_v2.sql y/o migracion_v2_a_v3.sql, que conservan
+-- los registros existentes.
 -- =====================================================================
 
 SET NAMES utf8mb4;
@@ -64,4 +65,24 @@ CREATE TABLE IF NOT EXISTS alta_adjuntos (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_codigo_alta (codigo_alta),
   FOREIGN KEY (alta_id) REFERENCES altas(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================================
+-- Usuarios del panel de administracion.
+-- La contrasena se guarda como hash de password_hash() (bcrypt): en la
+-- base de datos nunca hay contrasenas en texto plano.
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS usuarios (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(60) NOT NULL UNIQUE,
+  nombre_completo VARCHAR(160) NOT NULL,
+  ci VARCHAR(30) NOT NULL UNIQUE,
+  telefono VARCHAR(30) NOT NULL,
+  correo VARCHAR(160) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  ultimo_acceso DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

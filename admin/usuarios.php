@@ -2,12 +2,17 @@
 /**
  * Panel — usuarios del sistema.
  *
- * Listado simple y activación/desactivación de cuentas. El alta de usuarios
- * se hace en registro.php, que ya trae todas las validaciones.
+ * Listado con las tres operaciones sobre cada cuenta:
  *
- * No se borran cuentas: se desactivan. Una cuenta borrada dejaría sin
- * explicación los accesos ya registrados, y desactivar cumple la misma
- * función práctica.
+ *   - **Editar** — abre usuario_editar.php.
+ *   - **Activar / Desactivar** — retira o devuelve el acceso conservando el
+ *     registro de quién entró y cuándo. Es la vía recomendada.
+ *   - **Eliminar** — borrado definitivo, con confirmación y dos candados en
+ *     el servidor: nadie puede borrarse a sí mismo ni dejar la tabla de
+ *     usuarios vacía (eso reabriría el registro público).
+ *
+ * Todas las acciones van por POST con testigo anti-CSRF y responden con una
+ * redirección, para que al recargar la página no se repita la operación.
  */
 
 require_once __DIR__ . '/_plantilla.php';
@@ -16,26 +21,46 @@ $sesion = exigir_sesion();
 $aviso  = '';
 $error  = '';
 
-// --- Activar o desactivar una cuenta ----------------------------------
+// --- Acciones -----------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_valido(isset($_POST['csrf']) ? $_POST['csrf'] : '')) {
         $error = 'La sesión del formulario caducó. Vuelva a intentarlo.';
     } else {
         $id     = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-        $activo = !empty($_POST['activar']) ? 1 : 0;
+        $accion = isset($_POST['accion']) ? (string) $_POST['accion'] : '';
 
-        if ($id === $sesion['id'] && $activo === 0) {
-            $error = 'No puede desactivar su propia cuenta.';
-        } elseif ($id > 0) {
-            try {
-                db()->prepare('UPDATE usuarios SET activo = ? WHERE id = ?')->execute(array($activo, $id));
-                $aviso = $activo ? 'Cuenta activada.' : 'Cuenta desactivada.';
-            } catch (Exception $e) {
-                error_log('[altas] usuarios: ' . $e->getMessage());
-                $error = 'No fue posible actualizar la cuenta.';
+        if ($accion === 'eliminar') {
+            $resultado = eliminar_usuario($id);
+            if (!empty($resultado['ok'])) {
+                header('Location: usuarios.php?aviso='
+                    . rawurlencode('Usuario «' . $resultado['username'] . '» eliminado.'));
+                exit;
+            }
+            $error = $resultado['error'];
+
+        } elseif ($accion === 'estado') {
+            $activo = !empty($_POST['activar']) ? 1 : 0;
+
+            if ($id === $sesion['id'] && $activo === 0) {
+                $error = 'No puede desactivar su propia cuenta.';
+            } elseif ($id > 0) {
+                try {
+                    db()->prepare('UPDATE usuarios SET activo = ? WHERE id = ?')->execute(array($activo, $id));
+                    header('Location: usuarios.php?aviso='
+                        . rawurlencode($activo ? 'Cuenta activada.' : 'Cuenta desactivada.'));
+                    exit;
+                } catch (Exception $e) {
+                    error_log('[altas] usuarios estado: ' . $e->getMessage());
+                    $error = 'No fue posible actualizar la cuenta.';
+                }
             }
         }
     }
+}
+
+// Aviso traído por la redirección de una acción anterior.
+if ($aviso === '' && isset($_GET['aviso'])) {
+    $aviso = limpiar_texto($_GET['aviso'], 200);
 }
 
 // --- Listado -----------------------------------------------------------
@@ -67,13 +92,13 @@ admin_cabecera('Usuarios', 'usuarios');
 <?php if ($error): ?><div class="alert alert-danger py-2"><?= h($error) ?></div><?php endif; ?>
 
 <div class="card">
-  <div class="card-header d-flex align-items-center justify-content-between">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="gap:10px">
     <h3 class="card-title mb-0">Usuarios del panel</h3>
     <a href="<?= h(ruta_base()) ?>registro.php" class="btn btn-sm btn-primary">Registrar usuario</a>
   </div>
 
   <div class="card-body table-responsive p-0">
-    <table class="table table-sm table-hover mb-0">
+    <table class="table table-sm table-hover mb-0 tabla-usuarios">
       <thead>
         <tr>
           <th>Usuario</th>
@@ -84,7 +109,7 @@ admin_cabecera('Usuarios', 'usuarios');
           <th>Estado</th>
           <th>Último acceso</th>
           <th>Alta</th>
-          <th></th>
+          <th class="text-right">Opciones</th>
         </tr>
       </thead>
       <tbody>
@@ -93,11 +118,17 @@ admin_cabecera('Usuarios', 'usuarios');
         <?php endif; ?>
 
         <?php foreach ($usuarios as $u): ?>
+          <?php $propia = ((int) $u['id'] === $sesion['id']); ?>
           <tr>
-            <td><strong><?= h($u['username']) ?></strong></td>
+            <td>
+              <strong><?= h($u['username']) ?></strong>
+              <?php if ($propia): ?>
+                <span class="badge badge-secondary ml-1">Usted</span>
+              <?php endif; ?>
+            </td>
             <td><?= h($u['nombre_completo']) ?></td>
             <td><?= h($u['ci']) ?></td>
-            <td><?= h($u['telefono']) ?></td>
+            <td class="text-nowrap"><?= h($u['telefono']) ?></td>
             <td><?= h($u['correo']) ?></td>
             <td>
               <?php if ((int) $u['activo'] === 1): ?>
@@ -108,13 +139,15 @@ admin_cabecera('Usuarios', 'usuarios');
             </td>
             <td class="text-nowrap"><?= h(fecha_legible($u['ultimo_acceso'])) ?></td>
             <td class="text-nowrap"><?= h(fecha_legible($u['created_at'])) ?></td>
-            <td class="text-right text-nowrap">
-              <?php if ((int) $u['id'] === $sesion['id']): ?>
-                <span class="text-muted small">Su cuenta</span>
-              <?php else: ?>
+
+            <td class="text-right text-nowrap celda-acciones">
+              <a href="usuario_editar.php?id=<?= (int) $u['id'] ?>" class="btn btn-xs btn-primary">Editar</a>
+
+              <?php if (!$propia): ?>
                 <form method="post" action="" class="d-inline">
                   <?= csrf_campo() ?>
                   <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                  <input type="hidden" name="accion" value="estado">
                   <?php if ((int) $u['activo'] === 1): ?>
                     <button type="submit" class="btn btn-xs btn-default">Desactivar</button>
                   <?php else: ?>
@@ -122,12 +155,28 @@ admin_cabecera('Usuarios', 'usuarios');
                     <button type="submit" class="btn btn-xs btn-success">Activar</button>
                   <?php endif; ?>
                 </form>
+
+                <!-- Confirmación antes de borrar: es la única acción de esta
+                     pantalla que no se puede deshacer. -->
+                <form method="post" action="" class="d-inline"
+                      onsubmit="return confirm('¿Eliminar definitivamente al usuario «<?= h($u['username']) ?>»?\n\nEsta acción no se puede deshacer. Si solo quiere retirarle el acceso, use Desactivar.');">
+                  <?= csrf_campo() ?>
+                  <input type="hidden" name="id" value="<?= (int) $u['id'] ?>">
+                  <input type="hidden" name="accion" value="eliminar">
+                  <button type="submit" class="btn btn-xs btn-danger">Eliminar</button>
+                </form>
               <?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
+  </div>
+
+  <div class="card-footer text-muted small">
+    <strong>Desactivar</strong> retira el acceso y conserva el registro de entradas;
+    <strong>Eliminar</strong> borra la cuenta de forma definitiva. No se puede eliminar la
+    propia cuenta ni la última que quede en el sistema.
   </div>
 </div>
 

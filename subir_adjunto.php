@@ -39,20 +39,27 @@ if (!$alta) {
     error_json('El código de alta ingresado no corresponde a ninguna solicitud registrada.', 404);
 }
 
-// No se permite duplicar el documento firmado de una misma alta.
-try {
-    $st = db()->prepare('SELECT nombre_archivo_original, created_at FROM alta_adjuntos WHERE alta_id = ? ORDER BY id DESC LIMIT 1');
-    $st->execute(array((int) $alta['id']));
-    $previo = $st->fetch();
-} catch (Exception $e) {
-    $previo = null;
-}
+// Un alta ya verificada no admite otra carga: lo que bloquea es el estado,
+// no la simple existencia de un adjunto anterior. Así, cuando el panel
+// devuelve un alta a «pendiente» porque el documento llegó ilegible o
+// incompleto, el establecimiento puede volver a subirlo sin intervención
+// técnica, y el archivo anterior se conserva como historial.
+if ($alta['estado'] === 'verificado') {
+    $cuando = '';
+    try {
+        $st = db()->prepare('SELECT created_at FROM alta_adjuntos WHERE alta_id = ? ORDER BY id DESC LIMIT 1');
+        $st->execute(array((int) $alta['id']));
+        $previo = $st->fetch();
+        if ($previo) {
+            $cuando = ' el ' . date('d/m/Y H:i', strtotime($previo['created_at']));
+        }
+    } catch (Exception $e) {
+        error_log('[altas] subir_adjunto (previo): ' . $e->getMessage());
+    }
 
-if ($previo) {
     error_json(
-        'El alta ' . $alta['codigo_alta'] . ' ya tiene un documento firmado registrado el '
-        . date('d/m/Y H:i', strtotime($previo['created_at'])) . '. Si necesita reemplazarlo, '
-        . 'comuníquese con el administrador del sistema.',
+        'El alta ' . $alta['codigo_alta'] . ' ya tiene un documento firmado registrado' . $cuando
+        . '. Si necesita reemplazarlo, pida al administrador que devuelva el alta a pendiente.',
         409
     );
 }

@@ -55,9 +55,9 @@ function admin_cabecera($titulo, $seccion = 'panel')
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($titulo) ?> — Panel Alta Solicitada</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" href="<?= h($base) ?>assets/membrete.png" type="image/png">
+<link rel="icon" href="<?= h($base) ?>assets/logo-sedes.png" type="image/png">
 <link rel="stylesheet" href="<?= h($base) ?>assets/vendor/adminlte.min.css">
-<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=7">
+<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=13">
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">
@@ -91,7 +91,7 @@ function admin_cabecera($titulo, $seccion = 'panel')
   <!-- Menú lateral -->
   <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <a href="index.php" class="brand-link">
-      <img src="<?= h($base) ?>assets/membrete.png" alt="" class="brand-image">
+      <img src="<?= h($base) ?>assets/logo-sedes.png" alt="" class="brand-image">
       <span class="brand-text">Alta Solicitada</span>
     </a>
     <div class="sidebar">

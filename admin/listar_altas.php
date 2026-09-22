@@ -88,7 +88,11 @@ try {
     }
     $desplazamiento = ($pagina - 1) * $porPagina;
 
-    // El adjunto que se muestra es el último registrado para cada alta.
+    // El adjunto que se muestra es el último registrado para cada alta, y
+    // solo mientras el alta esté verificada: al devolverla a pendiente el
+    // documento anterior deja de contar como documento vigente, así que el
+    // panel lo trata como si no hubiera ninguno. La fila sigue en la tabla
+    // `alta_adjuntos` como historial; lo que cambia es que no se ofrece.
     $sql = 'SELECT a.*,
                    ad.id   AS adjunto_id,
                    ad.nombre_archivo_original AS adjunto_nombre,
@@ -97,7 +101,7 @@ try {
             FROM altas a
             LEFT JOIN (
                 SELECT alta_id, MAX(id) AS ultimo FROM alta_adjuntos GROUP BY alta_id
-            ) ult ON ult.alta_id = a.id
+            ) ult ON ult.alta_id = a.id AND a.estado = "verificado"
             LEFT JOIN alta_adjuntos ad ON ad.id = ult.ultimo'
          . $where
          . ' ORDER BY a.id DESC LIMIT ' . (int) $porPagina . ' OFFSET ' . (int) $desplazamiento;

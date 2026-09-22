@@ -81,14 +81,15 @@ class PdfAltaSolicitada extends FPDF
         $y = $this->tMargin;
 
         if ($this->rutaEscudo !== '') {
-            $altoEscudo  = 14.5;
-            $anchoEscudo = 14;
-            $this->Image($this->rutaEscudo, ($this->w - $anchoEscudo) / 2, $y, $anchoEscudo, $altoEscudo);
+            // Se fija solo el ancho y FPDF calcula el alto: así el logotipo
+            // conserva su proporción sea cual sea la imagen que se ponga.
+            $anchoEscudo = 13;
+            $this->Image($this->rutaEscudo, ($this->w - $anchoEscudo) / 2, $y, $anchoEscudo);
         }
 
         $this->SetTextColor(0, 0, 0);
         $this->SetFont('Helvetica', 'B', 9.5);
-        $this->SetXY($this->lMargin, $y + 15);
+        $this->SetXY($this->lMargin, $y + 16.5);
         $this->Cell($this->anchoUtil(), 5, $this->tx('SERVICIO DEPARTAMENTAL DE SALUD - ORURO'), 0, 1, 'C');
 
         if ($this->codigoAlta !== '') {
@@ -100,7 +101,7 @@ class PdfAltaSolicitada extends FPDF
             $this->Cell($ancho, 6.5, $this->tx($this->codigoAlta), 'LBR', 0, 'C');
         }
 
-        $yRegla = $y + 21;
+        $yRegla = $y + 22.5;
         $this->SetDrawColor(120, 120, 120);
         $this->Line($this->lMargin, $yRegla, $this->w - $this->rMargin, $yRegla);
         $this->SetDrawColor(0, 0, 0);
@@ -327,7 +328,9 @@ function construir_pdf_alta(array $a)
 
     $pdf = new PdfAltaSolicitada('P', 'mm', 'A4');
     $pdf->setCodigoAlta($a['codigo_alta']);
-    $pdf->setEscudo(__DIR__ . '/../assets/membrete.png');
+    // Se usa la versión recortada y con fondo transparente: sin el margen
+    // sobrante, el logotipo ocupa de verdad el espacio que se le reserva.
+    $pdf->setEscudo(__DIR__ . '/../assets/logo-sedes.png');
     $pdf->SetTitle('Formulario de Notificacion de Alta Solicitada ' . $a['codigo_alta']);
     $pdf->SetAuthor('SEDES Oruro');
     $pdf->SetCreator('Sistema de Alta Solicitada - SEDES Oruro');

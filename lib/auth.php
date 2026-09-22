@@ -67,7 +67,25 @@ function hay_sesion()
 function exigir_sesion()
 {
     if (hay_sesion()) {
-        return usuario_actual();
+        // La cookie de sesión sobrevive al borrado de la cuenta: sin esta
+        // comprobación, un usuario eliminado o desactivado seguiría dentro
+        // del panel hasta cerrar el navegador. Se comprueba una vez por
+        // petición, no en cada llamada a usuario_actual().
+        $yo = usuario_actual();
+        try {
+            $vigente = buscar_usuario($yo['id']);
+        } catch (Exception $e) {
+            error_log('[altas] exigir_sesion: ' . $e->getMessage());
+            $vigente = null;
+        }
+
+        if ($vigente && (int) $vigente['activo'] === 1) {
+            return $yo;
+        }
+
+        cerrar_sesion();
+        header('Location: ' . ruta_base() . 'login.php?motivo=cuenta');
+        exit;
     }
 
     $destino = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
@@ -195,12 +213,20 @@ function sin_usuarios()
 }
 
 /**
- * Da de alta un usuario del panel.
+ * Comprueba los datos de un usuario del panel.
  *
- * @param array $in Datos del formulario.
- * @return array  array('ok' => true, 'id' => int) o array('errores' => array)
+ * La usan tanto el registro como la edición, para que las dos pantallas
+ * apliquen exactamente las mismas reglas. La contraseña es obligatoria al
+ * crear y opcional al editar: en la edición, dejarla vacía significa
+ * «no la cambies».
+ *
+ * @param array    $in            Datos del formulario.
+ * @param int|null $idExcluir     Al editar, el id del propio usuario: sus
+ *                                valores no cuentan como duplicados.
+ * @param bool     $claveOpcional true en la edición.
+ * @return array array('errores' => array) o array('datos' => array)
  */
-function registrar_usuario(array $in)
+function validar_datos_usuario(array $in, $idExcluir = null, $claveOpcional = false)
 {
     $errores = array();
 
@@ -238,10 +264,15 @@ function registrar_usuario(array $in)
     $clave   = isset($in['clave']) ? (string) $in['clave'] : '';
     $repetir = isset($in['clave_repetida']) ? (string) $in['clave_repetida'] : '';
 
-    if (strlen($clave) < 8) {
-        $errores['clave'] = 'La contraseña debe tener al menos 8 caracteres.';
-    } elseif ($clave !== $repetir) {
-        $errores['clave_repetida'] = 'Las contraseñas no coinciden.';
+    // Al editar, una contraseña vacía significa «déjala como está».
+    $cambiaClave = !$claveOpcional || $clave !== '' || $repetir !== '';
+
+    if ($cambiaClave) {
+        if (strlen($clave) < 8) {
+            $errores['clave'] = 'La contraseña debe tener al menos 8 caracteres.';
+        } elseif ($clave !== $repetir) {
+            $errores['clave_repetida'] = 'Las contraseñas no coinciden.';
+        }
     }
 
     if ($errores) {
@@ -249,8 +280,16 @@ function registrar_usuario(array $in)
     }
 
     // Duplicados: se avisa con precisión en qué campo está el conflicto.
-    $st = db()->prepare('SELECT username, ci, correo FROM usuarios WHERE username = ? OR ci = ? OR correo = ?');
-    $st->execute(array($username, $ci, $correo));
+    $sql = 'SELECT username, ci, correo FROM usuarios WHERE (username = :u OR ci = :c OR correo = :e)';
+    $par = array(':u' => $username, ':c' => $ci, ':e' => $correo);
+    if ($idExcluir !== null) {
+        $sql .= ' AND id <> :id';
+        $par[':id'] = (int) $idExcluir;
+    }
+
+    $st = db()->prepare($sql);
+    $st->execute($par);
+
     foreach ($st->fetchAll() as $existente) {
         if ($existente['username'] === $username) {
             $errores['username'] = 'Ese nombre de usuario ya está registrado.';
@@ -267,19 +306,151 @@ function registrar_usuario(array $in)
         return array('errores' => $errores);
     }
 
+    return array('datos' => array(
+        'username'        => $username,
+        'nombre_completo' => $nombre,
+        'ci'              => $ci,
+        'telefono'        => $telefono,
+        'correo'          => $correo,
+        'clave'           => $cambiaClave ? $clave : null,
+    ));
+}
+
+/**
+ * Da de alta un usuario del panel.
+ *
+ * @return array array('ok' => true, 'id' => int) o array('errores' => array)
+ */
+function registrar_usuario(array $in)
+{
+    $revision = validar_datos_usuario($in);
+    if (isset($revision['errores'])) {
+        return array('errores' => $revision['errores']);
+    }
+    $d = $revision['datos'];
+
     try {
         $st = db()->prepare(
             'INSERT INTO usuarios (username, nombre_completo, ci, telefono, correo, password_hash)
              VALUES (?, ?, ?, ?, ?, ?)'
         );
         $st->execute(array(
-            $username, $nombre, $ci, $telefono, $correo,
-            password_hash($clave, PASSWORD_DEFAULT),
+            $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'],
+            password_hash($d['clave'], PASSWORD_DEFAULT),
         ));
         return array('ok' => true, 'id' => (int) db()->lastInsertId());
     } catch (Exception $e) {
         error_log('[altas] registrar_usuario: ' . $e->getMessage());
         return array('errores' => array('general' => 'No fue posible registrar el usuario. Intente nuevamente.'));
+    }
+}
+
+/** Devuelve un usuario por su id, o null si no existe. */
+function buscar_usuario($id)
+{
+    $st = db()->prepare('SELECT * FROM usuarios WHERE id = ? LIMIT 1');
+    $st->execute(array((int) $id));
+    $fila = $st->fetch();
+    return $fila ? $fila : null;
+}
+
+/**
+ * Modifica un usuario existente. La contraseña solo se cambia si se envió
+ * una nueva.
+ *
+ * @return array array('ok' => true, 'clave_cambiada' => bool) o array('errores' => array)
+ */
+function actualizar_usuario($id, array $in)
+{
+    $id = (int) $id;
+    if (!buscar_usuario($id)) {
+        return array('errores' => array('general' => 'El usuario ya no existe.'));
+    }
+
+    $revision = validar_datos_usuario($in, $id, true);
+    if (isset($revision['errores'])) {
+        return array('errores' => $revision['errores']);
+    }
+    $d = $revision['datos'];
+
+    try {
+        if ($d['clave'] !== null) {
+            $st = db()->prepare(
+                'UPDATE usuarios
+                    SET username = ?, nombre_completo = ?, ci = ?, telefono = ?, correo = ?, password_hash = ?
+                  WHERE id = ?'
+            );
+            $st->execute(array(
+                $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'],
+                password_hash($d['clave'], PASSWORD_DEFAULT), $id,
+            ));
+        } else {
+            $st = db()->prepare(
+                'UPDATE usuarios
+                    SET username = ?, nombre_completo = ?, ci = ?, telefono = ?, correo = ?
+                  WHERE id = ?'
+            );
+            $st->execute(array(
+                $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'], $id,
+            ));
+        }
+
+        // Si el usuario se editó a sí mismo, la sesión debe reflejarlo.
+        $sesion = usuario_actual();
+        if ($sesion && $sesion['id'] === $id) {
+            $_SESSION['username']        = $d['username'];
+            $_SESSION['nombre_completo'] = $d['nombre_completo'];
+        }
+
+        return array('ok' => true, 'clave_cambiada' => $d['clave'] !== null);
+    } catch (Exception $e) {
+        error_log('[altas] actualizar_usuario: ' . $e->getMessage());
+        return array('errores' => array('general' => 'No fue posible guardar los cambios. Intente nuevamente.'));
+    }
+}
+
+/**
+ * Borra un usuario del panel.
+ *
+ * Hay dos casos que se bloquean, y no por prudencia decorativa:
+ *
+ *   - Borrarse a uno mismo: cerraría la sesión a mitad de la operación.
+ *   - Borrar al último usuario: `registro.php` se abre al público cuando la
+ *     tabla de usuarios está vacía, para poder crear el primer
+ *     administrador. Dejarla en cero en un sitio ya publicado abriría el
+ *     registro a cualquiera que pase por la URL.
+ *
+ * Es un borrado definitivo, sin papelera. Para retirar el acceso sin perder
+ * el rastro de quién entró, la opción sigue siendo desactivar la cuenta.
+ *
+ * @return array array('ok' => true, 'username' => string) o array('error' => string)
+ */
+function eliminar_usuario($id)
+{
+    $id     = (int) $id;
+    $sesion = usuario_actual();
+
+    if ($sesion && $sesion['id'] === $id) {
+        return array('error' => 'No puede eliminar su propia cuenta. Pida a otro usuario que lo haga.');
+    }
+
+    $usuario = buscar_usuario($id);
+    if (!$usuario) {
+        return array('error' => 'El usuario ya no existe.');
+    }
+
+    try {
+        $total = (int) db()->query('SELECT COUNT(*) FROM usuarios')->fetchColumn();
+        if ($total <= 1) {
+            return array('error' => 'No se puede eliminar el único usuario del sistema: el registro '
+                . 'quedaría abierto al público.');
+        }
+
+        db()->prepare('DELETE FROM usuarios WHERE id = ?')->execute(array($id));
+        return array('ok' => true, 'username' => $usuario['username']);
+    } catch (Exception $e) {
+        error_log('[altas] eliminar_usuario: ' . $e->getMessage());
+        return array('error' => 'No fue posible eliminar el usuario.');
     }
 }
 

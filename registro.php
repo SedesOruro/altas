@@ -77,16 +77,16 @@ function clase_de($errores, $campo)
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Registro de usuario — Alta Solicitada</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" href="<?= h($base) ?>assets/membrete.png" type="image/png">
+<link rel="icon" href="<?= h($base) ?>assets/logo-sedes.png" type="image/png">
 <link rel="stylesheet" href="<?= h($base) ?>assets/vendor/adminlte.min.css">
-<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=7">
+<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=13">
 </head>
 <body class="pagina-acceso">
 
 <div class="caja-acceso caja-acceso--ancha">
 
   <div class="acceso-marca">
-    <img src="<?= h($base) ?>assets/membrete.png" alt="Escudo del Departamento de Oruro">
+    <img src="<?= h($base) ?>assets/logo-sedes.png" alt="Logotipo del Servicio Departamental de Salud de Oruro">
     <h1><?= $primerArranque ? 'Primer administrador' : 'Registro de usuario' ?></h1>
     <p>SEDES Oruro</p>
   </div>

@@ -38,17 +38,19 @@ admin_cabecera('Altas registradas', 'panel');
 <!-- Resumen -->
 <div class="row">
   <?php
+  // La clave de cada tarjeta permite que admin.js refresque la cifra sin
+  // recargar la página cuando una acción cambia el estado de un alta.
   $tarjetas = array(
-      array('Altas registradas', $resumen['total'],       'bg-primary'),
-      array('Con documento firmado', $resumen['verificadas'], 'bg-success'),
-      array('Pendientes de subir',   $resumen['pendientes'],  'bg-warning'),
-      array('Registradas hoy',       $resumen['hoy'],         'bg-info'),
+      array('Altas registradas',     $resumen['total'],       'bg-primary', 'total'),
+      array('Con documento firmado', $resumen['verificadas'], 'bg-success', 'verificadas'),
+      array('Pendientes de subir',   $resumen['pendientes'],  'bg-warning', 'pendientes'),
+      array('Registradas hoy',       $resumen['hoy'],         'bg-info',    'hoy'),
   );
   foreach ($tarjetas as $t): ?>
     <div class="col-6 col-lg-3">
       <div class="small-box <?= $t[2] ?>">
         <div class="inner">
-          <h3><?= (int) $t[1] ?></h3>
+          <h3 data-resumen="<?= $t[3] ?>"><?= (int) $t[1] ?></h3>
           <p><?= h($t[0]) ?></p>
         </div>
       </div>
@@ -57,7 +59,9 @@ admin_cabecera('Altas registradas', 'panel');
 </div>
 
 <!-- Tabla -->
-<div class="card">
+<!-- El testigo anti-CSRF se publica aquí para que admin.js lo envíe en las
+     acciones que modifican datos (devolver un alta a pendiente). -->
+<div class="card" data-csrf="<?= h(csrf_token()) ?>">
   <div class="card-header">
     <h3 class="card-title">Listado de altas</h3>
   </div>
@@ -99,6 +103,8 @@ admin_cabecera('Altas registradas', 'panel');
         <button type="button" class="btn btn-default btn-block" id="btn-limpiar">Limpiar</button>
       </div>
     </form>
+
+    <p class="alert py-2" id="aviso-tabla" role="status" hidden></p>
 
     <div class="table-responsive tabla-visual">
       <table class="table table-sm table-hover table-bordered" id="tabla-altas">
@@ -149,4 +155,4 @@ admin_cabecera('Altas registradas', 'panel');
   </div>
 </div>
 
-<?php admin_pie(array('assets/admin.js?v=1')); ?>
+<?php admin_pie(array('assets/admin.js?v=4')); ?>

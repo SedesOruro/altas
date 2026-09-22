@@ -16,7 +16,7 @@ require_once __DIR__ . '/lib/redes.php';
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Alta Solicitada — SEDES Oruro</title>
 <meta name="description" content="Sistema de notificación de alta solicitada del Servicio Departamental de Salud de Oruro.">
-<link rel="icon" href="assets/membrete.png" type="image/png">
+<link rel="icon" href="assets/logo-sedes.png" type="image/png">
 <link rel="stylesheet" href="assets/style.css?v=14">
 </head>
 <body>
@@ -25,7 +25,7 @@ require_once __DIR__ . '/lib/redes.php';
 
 <header class="cabecera">
   <div class="contenedor cabecera__interior">
-    <img class="cabecera__escudo" src="assets/membrete.png" alt="Escudo del Departamento de Oruro">
+    <img class="cabecera__escudo" src="assets/logo-sedes.png" alt="Logotipo del Servicio Departamental de Salud de Oruro">
     <div class="cabecera__texto">
       <p class="cabecera__institucion">Servicio Departamental de Salud — Oruro</p>
       <h1 class="cabecera__titulo">Formulario de Notificación de Alta Solicitada</h1>

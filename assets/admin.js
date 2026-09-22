@@ -81,8 +81,19 @@
               'href="ver_adjunto.php?id=' + encodeURIComponent(alta.adjunto_id) + '" ' +
               'title="Ver el documento firmado que se subió">PDF subido</a>';
     } else {
+      // Sin documento vigente: o nunca se subió, o el alta se devolvió a
+      // pendiente y el anterior dejó de contar.
       html += ' <button type="button" class="btn btn-xs btn-default" disabled ' +
-              'title="Todavía no se ha subido el documento firmado">PDF subido</button>';
+              'title="No hay documento firmado vigente: el alta está pendiente de subir">' +
+              'PDF subido</button>';
+    }
+
+    // Solo tiene sentido devolver a pendiente lo que ya está verificado.
+    if (alta.estado === 'verificado') {
+      html += ' <button type="button" class="btn btn-xs btn-warning" data-pendiente="' +
+              esc(alta.codigo_alta) + '" ' +
+              'title="Devolver el alta a pendiente para que se pueda subir el documento otra vez">' +
+              'Devolver a pendiente</button>';
     }
 
     return html + '</td>';
@@ -207,6 +218,86 @@
   $('#btn-limpiar').addEventListener('click', function () {
     filtros.reset();
     recargarDesdeElInicio();
+  });
+
+  // -------------------------------------------------------------------
+  // Devolver un alta a pendiente
+  //
+  // Se usa cuando el documento firmado llegó ilegible, incompleto o era de
+  // otro paciente: el alta vuelve a «pendiente» y el establecimiento puede
+  // subirlo otra vez con el mismo código. El documento anterior no se
+  // borra, queda en el historial.
+  // -------------------------------------------------------------------
+  var aviso = $('#aviso-tabla');
+  var csrf  = document.querySelector('[data-csrf]');
+  csrf = csrf ? csrf.getAttribute('data-csrf') : '';
+
+  function mostrarAviso(texto, tipo) {
+    if (!aviso) { return; }
+    aviso.textContent = texto;
+    aviso.className = 'alert py-2 alert-' + (tipo === 'error' ? 'danger' : 'success');
+    aviso.hidden = false;
+  }
+
+  /** Refresca las cuatro cifras del encabezado con lo que devuelve el servidor. */
+  function pintarResumen(resumen) {
+    if (!resumen) { return; }
+    Object.keys(resumen).forEach(function (clave) {
+      var celda = document.querySelector('[data-resumen="' + clave + '"]');
+      if (celda) { celda.textContent = resumen[clave]; }
+    });
+  }
+
+  function devolverAPendiente(codigo, boton) {
+    var parametros = new URLSearchParams();
+    parametros.set('codigo_alta', codigo);
+    parametros.set('csrf', csrf);
+
+    boton.disabled = true;
+    boton.textContent = 'Devolviendo…';
+
+    fetch('devolver_pendiente.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: parametros.toString()
+    })
+      .then(function (r) {
+        if (r.status === 401) { window.location.href = '../login.php'; return null; }
+        return r.json();
+      })
+      .then(function (datos) {
+        if (!datos) { return; }
+        if (!datos.ok) {
+          mostrarAviso(datos.error || 'No fue posible cambiar el estado.', 'error');
+          boton.disabled = false;
+          boton.textContent = 'Devolver a pendiente';
+          return;
+        }
+        mostrarAviso(datos.mensaje, 'ok');
+        pintarResumen(datos.resumen);
+        // Se recarga el tramo visible: cambia el estado de la fila y, si hay
+        // un filtro por estado puesto, incluso qué filas salen.
+        cargar();
+      })
+      .catch(function () {
+        mostrarAviso('No se pudo contactar con el servidor.', 'error');
+        boton.disabled = false;
+        boton.textContent = 'Devolver a pendiente';
+      });
+  }
+
+  cuerpo.addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-pendiente]');
+    if (!boton) { return; }
+
+    var codigo = boton.getAttribute('data-pendiente');
+    var texto = '¿Devolver el alta ' + codigo + ' al estado pendiente?\n\n' +
+                'El establecimiento podrá subir el documento firmado otra vez con el mismo ' +
+                'código. El documento que se subió antes se conserva en el historial.';
+    if (window.confirm(texto)) {
+      devolverAPendiente(codigo, boton);
+    }
   });
 
   $('#btn-primera').addEventListener('click', function () { estado.pagina = 1; cargar(); });

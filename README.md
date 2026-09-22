@@ -150,7 +150,8 @@ registro.php               Alta de usuarios del panel
 salir.php                  Cierre de sesión
 
 admin/index.php            Panel: tabla de altas con filtros y paginación
-admin/usuarios.php         Panel: listado y activación de usuarios
+admin/usuarios.php         Panel: listado, activación y borrado de usuarios
+admin/usuario_editar.php   Panel: edición de un usuario y borrado con confirmación
 admin/listar_altas.php     GET   → JSON con las altas filtradas y paginadas
 admin/ver_adjunto.php      GET   → entrega el documento firmado (exige sesión)
 admin/_plantilla.php       Armazón AdminLTE común a las páginas del panel
@@ -312,9 +313,27 @@ horizontal y trae dos botones por fila:
 - **PDF subido** — el escaneo firmado que se cargó después; aparece deshabilitado mientras
   no exista.
 
-**Usuarios** lista las cuentas y permite activarlas o desactivarlas. Las cuentas no se
-borran: una cuenta eliminada dejaría sin explicación los accesos ya registrados, y
-desactivarla cumple la misma función.
+**Usuarios** lista las cuentas con tres operaciones sobre cada una:
+
+- **Editar** (`admin/usuario_editar.php`) — los mismos cinco campos del registro más un
+  cambio de contraseña opcional: dejar esos dos campos vacíos conserva la actual, que es lo
+  que se espera cuando lo que se viene a corregir es un teléfono. La validación es la misma
+  función que usa el registro (`validar_datos_usuario`), así que las dos pantallas no pueden
+  divergir.
+- **Desactivar / Activar** — retira o devuelve el acceso conservando el registro de quién
+  entró y cuándo. Es la vía recomendada.
+- **Eliminar** — borrado definitivo, con confirmación en el navegador y dos candados en el
+  servidor: **nadie puede borrarse a sí mismo** (cerraría su propia sesión a mitad de la
+  operación) ni **dejar la tabla de usuarios vacía**, porque `registro.php` se abre al
+  público cuando no hay ningún usuario y eso dejaría el registro a merced de cualquiera.
+
+Todas las acciones van por POST con testigo anti-CSRF y responden con una redirección, para
+que al recargar la página no se repita la operación.
+
+Una cuenta eliminada o desactivada **pierde el acceso en el acto**: `exigir_sesion()`
+comprueba en cada petición que el usuario de la sesión siga existiendo y activo, y si no,
+cierra la sesión y avisa en el login. Sin eso, la cookie sobreviviría al borrado y la persona
+seguiría dentro del panel hasta cerrar el navegador.
 
 ### Seguridad del panel
 

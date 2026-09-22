@@ -54,16 +54,16 @@ $primerArranque = sin_usuarios();
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inicio de sesión — Alta Solicitada</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" href="<?= h($base) ?>assets/membrete.png" type="image/png">
+<link rel="icon" href="<?= h($base) ?>assets/logo-sedes.png" type="image/png">
 <link rel="stylesheet" href="<?= h($base) ?>assets/vendor/adminlte.min.css">
-<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=7">
+<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=13">
 </head>
 <body class="pagina-acceso">
 
 <div class="caja-acceso">
 
   <div class="acceso-marca">
-    <img src="<?= h($base) ?>assets/membrete.png" alt="Escudo del Departamento de Oruro">
+    <img src="<?= h($base) ?>assets/logo-sedes.png" alt="Logotipo del Servicio Departamental de Salud de Oruro">
     <h1>Alta Solicitada</h1>
     <p>SEDES Oruro</p>
   </div>
@@ -71,6 +71,13 @@ $primerArranque = sin_usuarios();
   <div class="card">
     <div class="card-body">
       <h2 class="h6 mb-3">Inicie sesión para entrar al panel</h2>
+
+      <?php if (isset($_GET['motivo']) && $_GET['motivo'] === 'cuenta'): ?>
+        <div class="alert alert-warning py-2 mb-3">
+          Su sesión se cerró porque la cuenta ya no está disponible.
+          Consulte con el administrador del sistema.
+        </div>
+      <?php endif; ?>
 
       <?php if ($error): ?>
         <div class="alert alert-danger py-2 mb-3"><?= h($error) ?></div>

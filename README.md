@@ -144,7 +144,7 @@ DELETE FROM alta_adjuntos; DELETE FROM altas; ALTER TABLE altas AUTO_INCREMENT =
 
 ```
 index.html                 Portada pública de presentación
-registro_altas.html        Formulario de altas (llenado + subida del firmado)
+registro_altas.php         Formulario de altas (llenado + subida del firmado)
 login.php                  Inicio de sesión del panel
 registro.php               Alta de usuarios del panel
 salir.php                  Cierre de sesión
@@ -158,6 +158,9 @@ admin/_plantilla.php       Armazón AdminLTE común a las páginas del panel
 assets/style.css           Estilos
 assets/app.js              Validación en cliente y llamadas fetch()
 assets/calendario.js       Selector de fecha táctil que sustituye al campo nativo
+assets/tipografia.css      Declaraciones @font-face de Atkinson Hyperlegible
+assets/fonts/              Archivos .woff2 de la tipografía (auto-alojada)
+assets/salud.svg           Ilustración de fondo de la portada
 assets/admin.css           Ajustes propios sobre AdminLTE
 assets/admin.js            Tabla del panel: filtros, paginación y botones
 assets/vendor/             AdminLTE 3.2, Bootstrap 4 y jQuery (sin CDN)
@@ -173,6 +176,7 @@ verificar_codigo.php       GET   → informa si un código de alta existe
 subir_adjunto.php          POST  → recibe y registra el documento firmado
 
 lib/auth.php               Sesiones, contraseñas, CSRF y guardias del panel
+lib/redes.php              Catálogo de redes, municipios y establecimientos
 lib/helpers.php            Respuestas JSON, validación, limitador de intentos
 lib/pdf_alta.php           Maquetación del PDF (fidelidad al formato Word)
 lib/fpdf/                  Librería FPDF 1.86 (incluida, sin Composer)
@@ -200,11 +204,91 @@ La página está diseñada para móvil primero y se adapta a tableta y escritori
 columna hasta 719 px y dos columnas desde 720 px, con controles de al menos 44 px de alto y
 texto de 16 px en los campos (por debajo de ese tamaño iOS hace zoom automático al escribir).
 
+### Sistema de diseño
+
+Los colores, espacios, tamaños y sombras salen de un juego de fichas (*tokens*) declarado en
+`:root`, al principio de `assets/style.css`. Los componentes nunca escriben un color en
+crudo: usan los alias semánticos (`--color-marca`, `--color-error`, `--e-4`, `--radio`…), de
+modo que un cambio de identidad se hace en un solo lugar. El panel comparte esas decisiones
+en `assets/admin.css`.
+
+La identidad es un **terracota cálido** (`--marca-700` = `#a8470e`). Los tonos de marca son
+quemados a propósito: un naranja vivo sobre blanco no llega al contraste 4.5:1 que exige la
+WCAG AA, mientras que este alcanza 5.9:1 con texto blanco y 7.2:1 en su variante oscura. Los
+grises llevan algo de calidez, porque un gris frío junto al terracota se ve sucio.
+
+El **anillo de foco no es naranja** sino casi negro (`#22160f`): sobre un botón de marca, un
+anillo del mismo color desaparecería.
+
+Los botones usan esquinas suaves (14 px, no cápsula: la cápsula resta seriedad a un trámite),
+un degradado de un solo paso, sombra en capas y una elevación de 1 px al pasar por encima;
+al pulsarlos se hunden, que es lo que confirma el toque en pantalla táctil.
+
+La portada lleva de fondo `assets/salud.svg`, una ilustración propia de motivos de salud
+—pulso, escudo, cruz y estetoscopio—. Es un SVG y no una fotografía: pesa unos pocos
+kilobytes, se ve nítido en cualquier pantalla, no arrastra licencias de terceros y se tiñe
+con los colores del sistema. Va en un pseudoelemento con opacidad baja y un velo claro
+encima, de modo que es decorativa (no aparece en el árbol de accesibilidad) y el titular
+conserva su contraste.
+
+La tipografía es **Atkinson Hyperlegible**, del Braille Institute, alojada en el propio
+servidor (`assets/fonts/`, ~80 KB). Está diseñada para distinguir caracteres que suelen
+confundirse —I/l/1, O/0, b/d—, lo que importa cuando lo que se lee son números de historia
+clínica y cédulas. Como el resto de dependencias, no se carga desde una CDN.
+
+### Accesibilidad
+
+- Contraste comprobado en las cuatro pantallas: todo el texto llega a 4.5:1 (3:1 en títulos
+  grandes). Se corrigieron los colores de AdminLTE que no llegaban —el verde de las insignias
+  daba 3.1:1 y el azul del menú activo 3.98:1—, y las tarjetas de resumen se rehicieron
+  porque el texto blanco sobre su amarillo daba 1.9:1.
+- Un único anillo de foco visible en toda la aplicación, nunca suprimido.
+- Enlace «Saltar al contenido» al principio de cada página pública.
+- Cada campo enlaza con su ayuda y su error mediante `aria-describedby`, y se marca con
+  `aria-invalid` cuando falla.
+- El error nunca se comunica solo con color: hay borde reforzado, icono y texto.
+- Objetivos táctiles de 44 px o más, y `prefers-reduced-motion` respetado.
+
+### Formulario largo
+
+Cinco secciones son muchas para no saber por dónde se va, así que el formulario añade:
+
+- Una **barra de progreso** fija que indica la sección pendiente y cuántas están completas;
+  cada sección terminada marca su número en verde.
+- **Validación al salir del campo**, no mientras se escribe: se avisa de un campo obligatorio
+  vacío solo después de haberlo visitado, y el error desaparece en cuanto se corrige.
+- Un **resumen de errores** al fallar el envío, que recibe el foco y enlaza con cada campo
+  con problema. Complementa los mensajes por campo, no los sustituye, y se descuenta a medida
+  que se corrigen.
+
 Los campos de fecha **no usan el selector nativo del navegador**, cuyo comportamiento en móvil
 cambia mucho de un equipo a otro. `assets/calendario.js` los convierte en un botón que muestra
 la fecha en formato `dd/mm/aaaa` y abre un calendario propio con selectores de mes y año,
 cuadrícula de días táctil y atajos «Hoy» y «Ayer». El `<input>` original se conserva como
 `hidden`, así que el envío y la validación no cambian.
+
+### Redes, municipios y establecimientos
+
+La primera sección del formulario es dependiente: al elegir la **Red de Salud** se completa
+solo el **Municipio** y la lista de **Establecimientos** se acota a los de esa red. Cuando la
+red tiene un único establecimiento, queda seleccionado sin intervención del usuario.
+
+| Red | Municipio | Establecimientos |
+|---|---|---|
+| Red Urbana | Oruro | Hospital General San Juan de Dios de Oruro, Hospital Walter Khon, Hospital Barrios Mineros, C.S.I. 7 de Marzo, C.S.I. Rafael Pabón, C.S.I. Rumy Campana, C.S.I. Vinto |
+| Red Azanake | Challapata | Hospital San Juan de Dios de Challapata |
+| Red Minera | Huanuni | Hospital San Martín de Porres |
+| Red Norte | Caracollo | Hospital San Andrés de Caracollo |
+
+El catálogo vive en **[`lib/redes.php`](lib/redes.php)** y es la única fuente: de ahí salen
+las opciones que pinta `registro_altas.php`, el JSON que usa el navegador para el llenado
+automático, y las comprobaciones que hace `crear_alta.php` al guardar. Para agregar o quitar
+un establecimiento basta con editar ese archivo.
+
+La validación también es del lado del servidor, no solo del navegador: una petición con una
+red inexistente, o con un establecimiento que no pertenece a la red enviada, se rechaza con
+`400`. El municipio ni siquiera se toma del cliente — se deriva de la red, de modo que no
+pueden guardarse combinaciones imposibles.
 
 > **Al publicar cambios en el CSS o el JavaScript**, suba el número de versión de
 > `?v=` en las tres referencias de `index.html`. Sin eso, los navegadores que ya visitaron

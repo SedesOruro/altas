@@ -34,6 +34,19 @@
     $$('.campo--invalido', form).forEach(function (c) {
       c.classList.remove('campo--invalido');
     });
+    $$('[aria-invalid="true"]', form).forEach(function (control) {
+      control.removeAttribute('aria-invalid');
+    });
+  }
+
+  /** Control real de un campo, sea input, select o el botón del calendario. */
+  function controlDe(form, nombreCampo) {
+    var control = form.elements[nombreCampo];
+    if (control && control.type === 'hidden') {
+      // Las fechas son inputs ocultos: quien recibe el foco es su botón.
+      return $('#' + nombreCampo + '_boton', form) || control;
+    }
+    return control || null;
   }
 
   function marcarError(form, nombreCampo, texto) {
@@ -41,8 +54,41 @@
     if (!p) { return; }
     p.textContent = texto;
     p.classList.add('visible');
+
     var contenedor = p.closest('.campo');
     if (contenedor) { contenedor.classList.add('campo--invalido'); }
+
+    // aria-invalid lo anuncia el lector de pantalla; el texto ya está
+    // enlazado con aria-describedby desde prepararCampos().
+    var control = controlDe(form, nombreCampo);
+    if (control && control.setAttribute) { control.setAttribute('aria-invalid', 'true'); }
+  }
+
+  /**
+   * Enlaza cada control con su texto de ayuda y su mensaje de error, para
+   * que el lector de pantalla los lea junto al campo. Se hace aquí y no en
+   * el HTML porque los identificadores se derivan del nombre del campo.
+   */
+  function prepararCampos(form) {
+    $$('.campo__error', form).forEach(function (p) {
+      var nombre = p.getAttribute('data-error-de');
+      if (!nombre) { return; }
+
+      p.id = 'error-' + nombre;
+
+      var control = controlDe(form, nombre);
+      if (!control || !control.setAttribute) { return; }
+
+      var descriptores = [];
+      var ayuda = p.closest('.campo') ? p.closest('.campo').querySelector('.campo__ayuda') : null;
+      if (ayuda) {
+        ayuda.id = ayuda.id || 'ayuda-' + nombre;
+        descriptores.push(ayuda.id);
+      }
+      descriptores.push(p.id);
+
+      control.setAttribute('aria-describedby', descriptores.join(' '));
+    });
   }
 
   /** Asigna un valor por defecto y avisa a quien escuche (selector de fecha). */
@@ -57,7 +103,7 @@
     var primero = $('.campo--invalido input:not([type="hidden"]), .campo--invalido select, ' +
                     '.campo--invalido textarea, .campo--invalido .fecha__boton', form);
     if (primero) {
-      primero.focus();
+      primero.focus({ preventScroll: true });
       primero.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
@@ -144,7 +190,8 @@
     // Valores por defecto cómodos: la solicitud casi siempre es de hoy.
     ponerValor($('#fecha_solicitud'), formatoFechaHoy());
     ponerValor($('#hora_solicitud'), formatoHoraAhora());
-    $('#nombre_establecimiento').focus();
+    actualizarProgreso();
+    $('#red_salud').focus();
   });
 
   /** Deja la Sección A como al entrar: solo el botón «Nueva Solicitud de Alta». */
@@ -164,6 +211,10 @@
     limpiarErrores(formAlta);
     ocultarMensaje(mensajeAlta);
     contadorMotivo.textContent = '0';
+    aplicarRed(false);   // el municipio y los establecimientos vuelven a cero
+    mostrarResumenErrores([]);
+    $$('[data-tocado]', formAlta).forEach(function (c) { delete c.dataset.tocado; });
+    actualizarProgreso();
     formAlta.hidden = true;
     resultadoAlta.hidden = true;
     introLlenado.hidden = false;
@@ -185,15 +236,172 @@
     contadorMotivo.textContent = String(motivo.value.length);
   });
 
-  /** Validación en cliente antes de enviar (el servidor vuelve a validar). */
+  // -------------------------------------------------------------------
+  // Red de Salud → Municipio y Establecimiento
+  //
+  // La red es el primer campo y manda sobre los otros dos: fija el
+  // municipio y acota la lista de establecimientos. Cuando la red tiene un
+  // solo establecimiento, queda elegido sin que el usuario haga nada.
+  // El catálogo lo publica la página desde lib/redes.php, que es el mismo
+  // que usa el servidor para validar.
+  // -------------------------------------------------------------------
+  var catalogoRedes  = window.CATALOGO_REDES || {};
+  var selectRed      = $('#red_salud');
+  var campoMunicipio = $('#municipio');
+  var selectEstab    = $('#nombre_establecimiento');
+
+  function aplicarRed(conservarEstablecimiento) {
+    var red  = selectRed.value;
+    var info = catalogoRedes[red];
+
+    if (!info) {
+      campoMunicipio.value = '';
+      selectEstab.innerHTML = '<option value="">Elija primero la red de salud</option>';
+      selectEstab.disabled = true;
+      return;
+    }
+
+    campoMunicipio.value = info.municipio;
+
+    var anterior = conservarEstablecimiento ? selectEstab.value : '';
+    var lista    = info.establecimientos;
+    var opciones = '';
+
+    // Con un único establecimiento no se pide elegir: se asigna.
+    if (lista.length > 1) {
+      opciones += '<option value="">Seleccione el establecimiento…</option>';
+    }
+    lista.forEach(function (nombre) {
+      opciones += '<option value="' + nombre.replace(/"/g, '&quot;') + '">' + nombre + '</option>';
+    });
+
+    selectEstab.innerHTML = opciones;
+    selectEstab.disabled = false;
+    selectEstab.value = (lista.indexOf(anterior) !== -1) ? anterior : lista[0];
+
+    // Con varios establecimientos la elección es del usuario.
+    if (lista.length > 1 && lista.indexOf(anterior) === -1) {
+      selectEstab.value = '';
+    }
+  }
+
+  selectRed.addEventListener('change', function () {
+    aplicarRed(false);
+    limpiarErrores(formAlta);
+  });
+
+  aplicarRed(false);
+
+  // -------------------------------------------------------------------
+  // Validación al salir del campo y progreso por secciones
+  //
+  // Avisar al abandonar un campo evita llegar al final con diez errores de
+  // golpe. Se valida al salir del campo, nunca mientras se escribe:
+  // corregir a alguien a mitad de palabra molesta más de lo que ayuda.
+  // -------------------------------------------------------------------
+  prepararCampos(formAlta);
+
+  var SECCIONES = ['Establecimiento', 'Paciente', 'Internación', 'Declaración', 'Firmas'];
+
+  /** ¿Están completos los campos obligatorios de esta sección? */
+  function seccionCompleta(seccion) {
+    return $$('input[required], select[required], textarea[required]', seccion)
+      .every(function (control) { return String(control.value).trim() !== ''; });
+  }
+
+  function actualizarProgreso() {
+    var secciones = $$('#form-alta [data-seccion]');
+    if (!secciones.length) { return; }
+
+    var completas = 0;
+    secciones.forEach(function (seccion) {
+      var lista = seccionCompleta(seccion);
+      seccion.classList.toggle('bloque--completo', lista);
+      if (lista) { completas++; }
+    });
+
+    var relleno = $('#progreso-relleno');
+    var conteo  = $('#progreso-conteo');
+    var texto   = $('#progreso-texto');
+
+    if (relleno) { relleno.style.width = (completas / secciones.length * 100) + '%'; }
+    if (conteo)  { conteo.textContent = completas + ' / ' + secciones.length + ' completas'; }
+
+    // El rótulo señala la primera sección que falta: es la que toca atender.
+    if (texto) {
+      var pendiente = secciones.filter(function (sec) { return !seccionCompleta(sec); })[0];
+      if (pendiente) {
+        var indice = Number(pendiente.getAttribute('data-seccion'));
+        texto.textContent = 'Sección ' + indice + ' de ' + secciones.length + ' · ' + SECCIONES[indice - 1];
+      } else {
+        texto.textContent = 'Todas las secciones están completas';
+      }
+    }
+  }
+
+  /** Quita el error de un campo en cuanto queda corregido. */
+  function revalidarCampo(nombre) {
+    var p = $('[data-error-de="' + nombre + '"]', formAlta);
+    if (!p || !p.classList.contains('visible')) { return; }
+
+    var control = formAlta.elements[nombre];
+    if (control && String(control.value).trim() !== '') {
+      p.textContent = '';
+      p.classList.remove('visible');
+      var contenedor = p.closest('.campo');
+      if (contenedor) { contenedor.classList.remove('campo--invalido'); }
+      var foco = controlDe(formAlta, nombre);
+      if (foco && foco.removeAttribute) { foco.removeAttribute('aria-invalid'); }
+
+      // El resumen del encabezado también se descuenta: dejar ahí un error
+      // ya corregido haría dudar de si se arregló o no.
+      var item = $('#resumen-errores [data-ir-a="' + nombre + '"]');
+      if (item) {
+        var li = item.closest('li');
+        if (li) { li.remove(); }
+        var caja = $('#resumen-errores');
+        if (caja && !caja.querySelectorAll('li').length) { caja.hidden = true; }
+      }
+    }
+  }
+
+  // `blur` no burbujea: se escucha en fase de captura.
+  formAlta.addEventListener('blur', function (evento) {
+    var control = evento.target;
+    if (!control.name || !control.form) { return; }
+
+    // Solo se avisa de un campo obligatorio que se dejó vacío tras visitarlo;
+    // nunca de uno al que el usuario todavía no ha llegado.
+    if (control.required && String(control.value).trim() === '' && control.dataset.tocado === '1') {
+      var p = $('[data-error-de="' + control.name + '"]', formAlta);
+      if (p && !p.classList.contains('visible')) {
+        marcarError(formAlta, control.name, 'Este campo es obligatorio.');
+      }
+    }
+    control.dataset.tocado = '1';
+    actualizarProgreso();
+  }, true);
+
+  ['input', 'change'].forEach(function (evt) {
+    formAlta.addEventListener(evt, function (evento) {
+      if (evento.target.name) { revalidarCampo(evento.target.name); }
+      actualizarProgreso();
+    });
+  });
+
+  /**
+   * Comprueba el formulario y devuelve la lista de problemas en el orden en
+   * que aparecen en pantalla. Devolver la lista (y no un simple sí/no)
+   * permite construir con ella el resumen de errores del encabezado.
+   */
   function validarFormularioAlta() {
     limpiarErrores(formAlta);
-    var ok = true;
+    var errores = [];
 
     var obligatorios = {
-      nombre_establecimiento:  'Indique el nombre del establecimiento de salud.',
-      red_salud:               'Indique la red de salud.',
-      municipio:               'Indique el municipio.',
+      red_salud:               'Seleccione la red de salud.',
+      municipio:               'El municipio se completa al elegir la red.',
+      nombre_establecimiento:  'Seleccione el establecimiento de salud.',
       servicio_unidad:         'Indique el servicio o unidad.',
       nombre_paciente:         'Indique los nombres y apellidos del paciente.',
       edad:                    'Indique la edad del paciente.',
@@ -213,37 +421,89 @@
     Object.keys(obligatorios).forEach(function (nombre) {
       var campo = formAlta.elements[nombre];
       if (!campo || String(campo.value).trim() === '') {
-        marcarError(formAlta, nombre, obligatorios[nombre]);
-        ok = false;
+        errores.push({ campo: nombre, mensaje: obligatorios[nombre] });
       }
     });
 
     var edad = formAlta.elements.edad.value.trim();
     if (edad !== '' && (!/^\d{1,3}$/.test(edad) || Number(edad) > 130)) {
-      marcarError(formAlta, 'edad', 'La edad debe ser un número entero válido.');
-      ok = false;
+      errores.push({ campo: 'edad', mensaje: 'La edad debe ser un número entero válido.' });
     }
 
     // El alta no puede producirse antes del ingreso.
     var ingreso = formAlta.elements.fecha_internacion.value + 'T' + formAlta.elements.hora_internacion.value;
     var salida  = formAlta.elements.fecha_solicitud.value + 'T' + formAlta.elements.hora_solicitud.value;
-    if (ok && ingreso.length > 11 && salida.length > 11 && salida < ingreso) {
-      marcarError(formAlta, 'fecha_solicitud', 'La fecha y hora del alta no pueden ser anteriores a las de la internación.');
-      ok = false;
+    if (!errores.length && ingreso.length > 11 && salida.length > 11 && salida < ingreso) {
+      errores.push({
+        campo: 'fecha_solicitud',
+        mensaje: 'La fecha y hora del alta no pueden ser anteriores a las de la internación.'
+      });
     }
 
-    return ok;
+    // Se ordenan según la posición real del campo en la página, para que el
+    // resumen siga el mismo recorrido que hará el usuario al corregirlos.
+    var orden = $$('.campo__error', formAlta).map(function (p) { return p.getAttribute('data-error-de'); });
+    errores.sort(function (a, b) { return orden.indexOf(a.campo) - orden.indexOf(b.campo); });
+
+    errores.forEach(function (e) { marcarError(formAlta, e.campo, e.mensaje); });
+    return errores;
+  }
+
+  /**
+   * Resumen de errores al inicio del formulario. Complementa —no sustituye—
+   * los mensajes de cada campo: enlaza con ellos y recibe el foco, que es lo
+   * que permite corregir sin buscar a ciegas en un formulario largo.
+   */
+  function mostrarResumenErrores(errores) {
+    var caja  = $('#resumen-errores');
+    var lista = $('#resumen-errores-lista');
+    if (!caja || !lista) { return; }
+
+    if (!errores.length) {
+      caja.hidden = true;
+      lista.innerHTML = '';
+      return;
+    }
+
+    lista.innerHTML = errores.map(function (e) {
+      var control = controlDe(formAlta, e.campo);
+      var destino = control && control.id ? control.id : '';
+      var texto   = e.mensaje.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      return destino
+        ? '<li><a href="#' + destino + '" data-ir-a="' + e.campo + '">' + texto + '</a></li>'
+        : '<li>' + texto + '</li>';
+    }).join('');
+
+    caja.hidden = false;
+    caja.focus();
+  }
+
+  // Los enlaces del resumen llevan el foco al campo, no solo a su posición.
+  var resumenErrores = $('#resumen-errores');
+  if (resumenErrores) {
+    resumenErrores.addEventListener('click', function (e) {
+      var enlace = e.target.closest('[data-ir-a]');
+      if (!enlace) { return; }
+      e.preventDefault();
+      var control = controlDe(formAlta, enlace.getAttribute('data-ir-a'));
+      if (control) {
+        control.focus({ preventScroll: true });
+        control.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
   }
 
   formAlta.addEventListener('submit', function (evento) {
     evento.preventDefault();
     ocultarMensaje(mensajeAlta);
 
-    if (!validarFormularioAlta()) {
-      mostrarMensaje(mensajeAlta, 'Revise los campos marcados en rojo.', 'error');
-      enfocarPrimerError(formAlta);
+    var errores = validarFormularioAlta();
+    if (errores.length) {
+      mostrarResumenErrores(errores);
+      ocultarMensaje(mensajeAlta);
       return;
     }
+    mostrarResumenErrores([]);
 
     var datos = {};
     new FormData(formAlta).forEach(function (valor, clave) { datos[clave] = valor; });
@@ -261,10 +521,11 @@
 
         if (!respuesta.ok) {
           if (respuesta.campos) {
-            Object.keys(respuesta.campos).forEach(function (nombre) {
-              marcarError(formAlta, nombre, respuesta.campos[nombre]);
+            var delServidor = Object.keys(respuesta.campos).map(function (nombre) {
+              return { campo: nombre, mensaje: respuesta.campos[nombre] };
             });
-            enfocarPrimerError(formAlta);
+            delServidor.forEach(function (e) { marcarError(formAlta, e.campo, e.mensaje); });
+            mostrarResumenErrores(delServidor);
           }
           mostrarMensaje(mensajeAlta, respuesta.error || 'No fue posible registrar la solicitud.', 'error');
           return;

@@ -9,6 +9,7 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib/redes.php';
 
 exigir_metodo('POST');
 limitar_intentos('crear', 40, 600);
@@ -20,9 +21,7 @@ $in = entrada_post();
 // ---------------------------------------------------------------------
 $camposTexto = array(
     // 1. Datos del Establecimiento de Salud
-    'nombre_establecimiento'  => array('Nombre del Establecimiento de Salud', true, 255),
-    'red_salud'               => array('Red de Salud', true, 255),
-    'municipio'               => array('Municipio', true, 255),
+    // (red, municipio y establecimiento se validan aparte, contra el catálogo)
     'servicio_unidad'         => array('Servicio/Unidad', true, 255),
     // 2. Información del Paciente
     'nombre_paciente'         => array('Nombres y Apellidos', true, 255),
@@ -49,6 +48,36 @@ foreach ($camposTexto as $clave => $def) {
         $errores[$clave] = 'El campo "' . $etiqueta . '" es obligatorio.';
     }
     $datos[$clave] = $valor;
+}
+
+// ---------------------------------------------------------------------
+// Red de salud, municipio y establecimiento
+//
+// Los tres salen del catálogo de lib/redes.php: la red decide el municipio
+// y acota los establecimientos posibles. Se comprueba aquí y no solo en el
+// navegador, porque una petición puede llegar sin pasar por el formulario.
+// ---------------------------------------------------------------------
+$red = limpiar_texto(isset($in['red_salud']) ? $in['red_salud'] : '', 255);
+
+if ($red === '') {
+    $errores['red_salud'] = 'Seleccione la red de salud.';
+} elseif (!red_valida($red)) {
+    $errores['red_salud'] = 'La red de salud indicada no pertenece al catálogo del SEDES Oruro.';
+} else {
+    $datos['red_salud'] = $red;
+
+    // El municipio no se toma del cliente: se deriva de la red, que es lo
+    // que evita que lleguen combinaciones imposibles.
+    $datos['municipio'] = municipio_de_red($red);
+
+    $establecimiento = limpiar_texto(isset($in['nombre_establecimiento']) ? $in['nombre_establecimiento'] : '', 255);
+    if ($establecimiento === '') {
+        $errores['nombre_establecimiento'] = 'Seleccione el establecimiento de salud.';
+    } elseif (!establecimiento_de_red($red, $establecimiento)) {
+        $errores['nombre_establecimiento'] = 'Ese establecimiento no corresponde a la red «' . $red . '».';
+    } else {
+        $datos['nombre_establecimiento'] = $establecimiento;
+    }
 }
 
 // ---------------------------------------------------------------------

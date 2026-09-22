@@ -57,7 +57,7 @@ function admin_cabecera($titulo, $seccion = 'panel')
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="<?= h($base) ?>assets/membrete.png" type="image/png">
 <link rel="stylesheet" href="<?= h($base) ?>assets/vendor/adminlte.min.css">
-<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=1">
+<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=7">
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">

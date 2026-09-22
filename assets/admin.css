@@ -1,23 +1,137 @@
 /* =====================================================================
    Ajustes propios sobre AdminLTE — panel de Alta Solicitada
-   Solo lo imprescindible: el resto lo resuelve la plantilla.
+
+   El panel comparte identidad con la parte pública: misma tipografía
+   accesible, el mismo terracota institucional y el mismo anillo de foco.
+   AdminLTE pone la estructura; esto pone el acabado.
    ===================================================================== */
 
+@import url("tipografia.css");
+
 :root {
-  --azul-sedes: #0f4c81;
+  --marca: #a8470e;          /* 5.9:1 con texto blanco */
+  --marca-fuerte: #8f4116;   /* 7.2:1 */
+  --marca-suave: #fff4ec;
+  --marca-borde: #f3cdb2;
+  --cafe-menu: #3a2418;      /* menú lateral: marrón cálido, no negro */
+  --gris-texto: #5c4a3f;
+  /* El anillo de foco no es naranja: sobre un botón naranja desaparecería. */
+  --foco-panel: 0 0 0 3px #fff, 0 0 0 5.5px #22160f;
+
+  /* Nombres anteriores, conservados por las reglas ya escritas. */
+  --azul-sedes: var(--marca);
+  --azul-sedes-fuerte: var(--marca-fuerte);
 }
 
-body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+body,
+.btn,
+.form-control,
+.custom-select { font-family: "Atkinson Hyperlegible", "Segoe UI", Roboto, system-ui, sans-serif; }
+
+body { font-size: 15px; }
+
+/* Un solo anillo de foco, igual que en la parte pública: quien navega con
+   teclado no tiene que aprenderse dos lenguajes visuales. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--foco-panel);
+  border-radius: 6px;
+}
+
+/* AdminLTE deja los enlaces del menú sin foco perceptible sobre el azul. */
+.nav-sidebar .nav-link:focus-visible { box-shadow: 0 0 0 3px var(--cafe-menu), 0 0 0 5.5px #f3cdb2; }
+
+/* Las insignias de estado no se distinguen solo por color: llevan texto.
+   Los tonos de Bootstrap no llegan a 4.5:1 con texto blanco a este tamaño
+   (el verde #28a745 da 3.1:1), así que se oscurecen. */
+.badge { font-size: 11.5px; padding: 4px 8px; font-weight: 700; }
+.badge-success { background-color: #15774a; color: #fff; }
+.badge-warning { color: #4a3a05; background-color: #ffd971; }
+.badge-danger { background-color: #b3261e; color: #fff; }
+.badge-secondary { background-color: #5c4a3f; color: #fff; }
+
+/* Mismo motivo en los botones pequeños de la columna «Opciones». */
+.btn-primary { background-color: var(--marca); border-color: var(--marca); }
+.btn-primary:hover, .btn-primary:focus { background-color: var(--marca-fuerte); border-color: var(--marca-fuerte); }
+.btn-success { background-color: #15774a; border-color: #15774a; }
+.btn-success:hover, .btn-success:focus { background-color: #10603c; border-color: #10603c; }
+.btn-default, .btn-default:hover { color: #4a3a2e; }
+.btn-default[disabled] { color: #6e5a4d; }
+
+/* Objetivo táctil mínimo en los controles de la barra y la paginación. */
+.navbar-nav .nav-link { min-height: 44px; display: flex; align-items: center; gap: 6px; }
+.paginacion .btn { min-height: 38px; }
+.btn { border-radius: 8px; transition: background-color .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+.btn:active { transform: translateY(1px); }
+
+/* ---------- Tarjetas de resumen ---------------------------------------- */
+/* AdminLTE las pinta en colores saturados con texto blanco encima: sobre el
+   amarillo eso da 1.9:1, ilegible. Se rehacen como fichas blancas con una
+   franja de color, que además encajan con la sobriedad institucional. */
+.small-box {
+  position: relative;
+  background: #fff !important;
+  color: var(--gris-texto) !important;
+  border: 1px solid #e4d9d0;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(60, 35, 18, .07);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+/* La franja es decorativa: el dato lo da el número y su rótulo. */
+.small-box::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--tono, var(--azul-sedes));
+}
+
+.small-box .inner { padding: 14px 16px 14px 20px; }
+
+.small-box .inner h3 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #22160f;
+  font-variant-numeric: tabular-nums;
+}
+
+.small-box .inner p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris-texto);
+}
+
+.small-box.bg-primary { --tono: #a8470e; }
+.small-box.bg-success { --tono: #15774a; }
+.small-box.bg-warning { --tono: #b57d05; }
+.small-box.bg-info    { --tono: #8f4116; }
+
+/* ---------- Tabla: legibilidad ------------------------------------------ */
+.tabla-visual thead th { color: #4a3a2e; }
+.tabla-visual tbody td { vertical-align: middle; }
 
 /* ---------- Marca y menú ---------------------------------------------- */
 .brand-link { display: flex; align-items: center; gap: 9px; padding: 12px 14px; }
 .brand-image { width: 30px; height: auto; opacity: 1; margin: 0; }
 .brand-text { font-size: 15px; font-weight: 600; }
 
-.sidebar-dark-primary { background-color: #0b3c66; }
+.sidebar-dark-primary { background-color: var(--cafe-menu); }
 .nav-sidebar .nav-link { display: flex; align-items: center; gap: 10px; }
 .nav-sidebar .nav-link p { margin: 0; }
-.nav-sidebar .nav-link.active { background-color: var(--azul-sedes); }
+/* AdminLTE marca la opción activa con su azul #007bff, que con texto blanco
+   da 3.98:1. Se usa el azul institucional, que llega a 8.6:1. Hace falta
+   subir la especificidad para ganarle a `.nav-pills .nav-link.active`. */
+.sidebar .nav-sidebar.nav-pills .nav-link.active,
+.sidebar .nav-sidebar .nav-link.active {
+  background-color: var(--azul-sedes);
+  color: #fff;
+}
 
 .icono { flex: 0 0 auto; vertical-align: -3px; }
 
@@ -41,7 +155,10 @@ body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
 .hamburguesa::before { top: -6px; }
 .hamburguesa::after  { top: 6px; }
 
-.titulo-pagina { font-size: 20px; font-weight: 600; margin: 0; }
+/* AdminLTE deja el pie en un gris de 3.2:1: se oscurece para que se lea. */
+.main-footer { color: #5c4a3f; border-top-color: #e4d9d0; }
+
+.titulo-pagina { font-size: 20px; font-weight: 700; margin: 0; color: #22160f; }
 .content-header { padding: 14px 0.5rem 6px; }
 
 /* ---------- Filtros ---------------------------------------------------- */
@@ -73,8 +190,8 @@ body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #f4f6f9;
-  border-bottom: 2px solid #dee2e6;
+  background: #f7f2ee;
+  border-bottom: 2px solid #e4d9d0;
   font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: .02em;
@@ -103,13 +220,13 @@ body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
   z-index: 1;
   background: #fff;
   white-space: nowrap;
-  border-right: 2px solid #dee2e6;
+  border-right: 2px solid #e4d9d0;
 }
 
-#tabla-altas thead th:first-child { z-index: 3; background: #f4f6f9; }
-.table-hover tbody tr:hover .celda-opciones { background: #f2f6fb; }
+#tabla-altas thead th:first-child { z-index: 3; background: #f7f2ee; }
+.table-hover tbody tr:hover .celda-opciones { background: #fdf6f0; }
 
-.btn-xs { padding: 2px 7px; font-size: 11.5px; line-height: 1.5; border-radius: 3px; }
+.btn-xs { padding: 3px 9px; font-size: 11.5px; line-height: 1.5; border-radius: 6px; }
 
 /* ---------- Paginación -------------------------------------------------- */
 .paginacion {
@@ -120,16 +237,16 @@ body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
   justify-content: space-between;
 }
 
-.paginacion__resumen { font-size: 13px; color: #6c757d; }
+.paginacion__resumen { font-size: 13px; color: var(--gris-texto); }
 
 /* ---------- Páginas de acceso ------------------------------------------- */
 .pagina-acceso {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background: #eef2f6;
+  background: #f7f2ee;
 }
 
 .caja-acceso { width: 100%; max-width: 430px; }
@@ -137,12 +254,36 @@ body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
 
 .acceso-marca { text-align: center; margin-bottom: 18px; }
 .acceso-marca img { width: 62px; height: auto; }
-.acceso-marca h1 { font-size: 19px; font-weight: 600; margin: 10px 0 2px; color: #1c2530; }
-.acceso-marca p { font-size: 12.5px; color: #6c757d; margin: 0; text-transform: uppercase; letter-spacing: .06em; }
+.acceso-marca h1 { font-size: 21px; font-weight: 700; margin: 10px 0 2px; color: #22160f; }
+.acceso-marca p { font-size: 12.5px; color: var(--gris-texto); margin: 0; text-transform: uppercase; letter-spacing: .06em; }
 
-.caja-acceso .card { border-top: 3px solid var(--azul-sedes); }
-.caja-acceso .btn-primary { background-color: var(--azul-sedes); border-color: var(--azul-sedes); }
-.caja-acceso .form-control { min-height: 42px; }
-.caja-acceso label { font-weight: 600; font-size: 13px; }
+.caja-acceso .card {
+  border-top: 3px solid var(--marca);
+  border-radius: 14px;
+  box-shadow: 0 12px 34px rgba(60, 35, 18, .14);
+}
+
+.caja-acceso .card-body { padding: 22px; }
+
+/* Mismo acabado que los botones de la parte pública: esquina suave,
+   degradado de un paso y sombra en capas. */
+.caja-acceso .btn-primary {
+  background-image: linear-gradient(180deg, #ae4b0a 0%, #a8470e 100%);
+  background-color: var(--marca);
+  border-color: transparent;
+  border-radius: 12px;
+  min-height: 48px;
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 16px rgba(168, 71, 14, .24);
+}
+
+.caja-acceso .btn-primary:hover { background-image: linear-gradient(180deg, #a8470e 0%, #8f4116 100%); }
+
+/* 16 px en los campos: por debajo de eso iOS hace zoom al enfocarlos. */
+.caja-acceso .form-control { min-height: 46px; font-size: 16px; border-radius: 10px; }
+.caja-acceso label { font-weight: 700; font-size: 13.5px; color: #22160f; }
+.caja-acceso .form-text { font-size: 12.5px; }
+
+.enlace-pie a { color: var(--marca); font-weight: 700; }
 
 .enlace-pie { text-align: center; margin-top: 14px; font-size: 13px; }

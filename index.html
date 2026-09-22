@@ -6,9 +6,11 @@
 <title>Alta Solicitada — SEDES Oruro</title>
 <meta name="description" content="Sistema de notificación de alta solicitada del Servicio Departamental de Salud de Oruro: registro del formulario oficial, código de alta y carga del documento firmado.">
 <link rel="icon" href="assets/membrete.png" type="image/png">
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=15">
 </head>
 <body class="portada">
+
+<a class="saltar" href="#contenido">Saltar al contenido</a>
 
 <header class="cabecera">
   <div class="contenedor cabecera__interior">
@@ -17,11 +19,10 @@
       <p class="cabecera__institucion">Servicio Departamental de Salud — Oruro</p>
       <h1 class="cabecera__titulo">Alta Solicitada</h1>
     </div>
-    <a class="boton boton--claro cabecera__acceso" href="login.php">Inicio de Sesión</a>
   </div>
 </header>
 
-<main>
+<main id="contenido">
 
   <!-- Presentación -->
   <section class="portada__hero">
@@ -32,7 +33,7 @@
         retirarse de un establecimiento de salud bajo su propia responsabilidad.
       </p>
       <div class="portada__acciones">
-        <a class="boton boton--primario boton--grande" href="registro_altas.html">Registro de Altas</a>
+        <a class="boton boton--primario boton--grande" href="registro_altas.php">Registro de Altas</a>
       </div>
       <p class="portada__nota">
         Acceso libre para el personal de los establecimientos de salud del departamento.
@@ -41,9 +42,9 @@
   </section>
 
   <!-- Cómo funciona -->
-  <section class="contenedor portada__seccion">
-    <h3 class="portada__subtitulo">Cómo funciona</h3>
-    <ol class="pasos">
+  <section class="contenedor portada__seccion" aria-labelledby="titulo-como">
+    <h3 class="portada__subtitulo" id="titulo-como">Cómo funciona</h3>
+    <ol class="pasos" role="list">
       <li class="paso">
         <span class="paso__numero">1</span>
         <h4 class="paso__titulo">Se llena el formulario</h4>
@@ -90,8 +91,15 @@
 </main>
 
 <footer class="pie pie--portada">
-  <div class="contenedor">
+  <div class="contenedor pie__interior">
     <p>SEDES Oruro — Sistema de Notificación de Alta Solicitada</p>
+    <!-- Acceso del personal administrativo: va al final y como enlace de
+         texto porque es una puerta de servicio, no la acción principal de
+         la página. Lo que se espera de casi todo el que entra es registrar
+         un alta, y eso ya tiene su botón arriba. -->
+    <p class="pie__acceso">
+      <a href="login.php">Inicio de sesión del personal administrativo</a>
+    </p>
   </div>
 </footer>
 

@@ -1,3 +1,14 @@
+<?php
+/**
+ * Formulario público de altas.
+ *
+ * Es PHP y no HTML plano por un solo motivo: las opciones de «Red de Salud»
+ * y de «Establecimiento» se pintan desde `lib/redes.php`, el mismo catálogo
+ * que usa el servidor para validar lo que llega. Así no hay dos listas que
+ * mantener en paralelo.
+ */
+require_once __DIR__ . '/lib/redes.php';
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,9 +17,11 @@
 <title>Alta Solicitada — SEDES Oruro</title>
 <meta name="description" content="Sistema de notificación de alta solicitada del Servicio Departamental de Salud de Oruro.">
 <link rel="icon" href="assets/membrete.png" type="image/png">
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=14">
 </head>
 <body>
+
+<a class="saltar" href="#contenido">Saltar al contenido</a>
 
 <header class="cabecera">
   <div class="contenedor cabecera__interior">
@@ -32,7 +45,7 @@
   </div>
 </nav>
 
-<main class="contenedor">
+<main class="contenedor" id="contenido">
 
   <!-- ================================================================
        SECCIÓN A — LLENADO DE INFORMACIÓN
@@ -52,25 +65,64 @@
 
     <form id="form-alta" class="formulario" novalidate hidden>
 
+      <p class="leyenda-obligatorios">
+        Los campos marcados con <span class="req" aria-hidden="true">*</span>
+        <span class="visualmente-oculto">asterisco</span> son obligatorios.
+      </p>
+
+      <!-- Resumen de errores: se rellena al fallar el envío, recibe el foco
+           y enlaza con cada campo. Los errores por campo se mantienen. -->
+      <div class="resumen-errores" id="resumen-errores" role="alert" tabindex="-1"
+           aria-labelledby="resumen-errores-titulo" hidden>
+        <p class="resumen-errores__titulo" id="resumen-errores-titulo">Revise estos campos</p>
+        <ul id="resumen-errores-lista"></ul>
+      </div>
+
+      <!-- Con cinco secciones conviene saber cuánto falta. -->
+      <div class="progreso" aria-hidden="true">
+        <div class="progreso__fila">
+          <span class="progreso__texto" id="progreso-texto">Sección 1 de 5 · Establecimiento</span>
+          <span class="progreso__conteo" id="progreso-conteo">0 / 5 completas</span>
+        </div>
+        <div class="progreso__barra">
+          <span class="progreso__relleno" id="progreso-relleno"></span>
+        </div>
+      </div>
+
       <!-- 1. Establecimiento -->
-      <fieldset class="bloque">
-        <legend class="bloque__titulo">1. Datos del Establecimiento de Salud</legend>
+      <fieldset class="bloque" id="seccion-1" data-seccion="1">
+        <legend class="bloque__titulo"><span class="bloque__numero">1</span> Datos del Establecimiento de Salud</legend>
         <div class="grilla">
-          <div class="campo campo--ancho">
-            <label for="nombre_establecimiento">Nombre del Establecimiento de Salud <span class="req">*</span></label>
-            <input type="text" id="nombre_establecimiento" name="nombre_establecimiento" maxlength="255" autocomplete="off" required>
-            <p class="campo__error" data-error-de="nombre_establecimiento"></p>
-          </div>
+          <!-- La red manda: al elegirla se completan el municipio y la lista
+               de establecimientos que le corresponden. -->
           <div class="campo">
             <label for="red_salud">Red de Salud <span class="req">*</span></label>
-            <input type="text" id="red_salud" name="red_salud" maxlength="255" autocomplete="off" required>
+            <select id="red_salud" name="red_salud" required>
+              <option value="">Seleccione la red…</option>
+              <?php foreach (array_keys(catalogo_redes()) as $red): ?>
+                <option value="<?= htmlspecialchars($red, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($red, ENT_QUOTES, 'UTF-8') ?></option>
+              <?php endforeach; ?>
+            </select>
             <p class="campo__error" data-error-de="red_salud"></p>
           </div>
+
           <div class="campo">
             <label for="municipio">Municipio <span class="req">*</span></label>
-            <input type="text" id="municipio" name="municipio" maxlength="255" autocomplete="off" required>
+            <input type="text" id="municipio" name="municipio" maxlength="255"
+                   autocomplete="off" readonly required
+                   placeholder="Se completa según la red">
+            <p class="campo__ayuda">Se asigna automáticamente al elegir la red.</p>
             <p class="campo__error" data-error-de="municipio"></p>
           </div>
+
+          <div class="campo campo--ancho">
+            <label for="nombre_establecimiento">Nombre del Establecimiento de Salud <span class="req">*</span></label>
+            <select id="nombre_establecimiento" name="nombre_establecimiento" required disabled>
+              <option value="">Elija primero la red de salud</option>
+            </select>
+            <p class="campo__error" data-error-de="nombre_establecimiento"></p>
+          </div>
+
           <div class="campo campo--ancho">
             <label for="servicio_unidad">Servicio/Unidad <span class="req">*</span></label>
             <input type="text" id="servicio_unidad" name="servicio_unidad" maxlength="255" autocomplete="off" required>
@@ -80,8 +132,8 @@
       </fieldset>
 
       <!-- 2. Paciente -->
-      <fieldset class="bloque">
-        <legend class="bloque__titulo">2. Información del Paciente</legend>
+      <fieldset class="bloque" id="seccion-2" data-seccion="2">
+        <legend class="bloque__titulo"><span class="bloque__numero">2</span> Información del Paciente</legend>
         <div class="grilla">
           <div class="campo campo--ancho">
             <label for="nombre_paciente">Nombres y Apellidos <span class="req">*</span></label>
@@ -128,8 +180,8 @@
       </fieldset>
 
       <!-- 3. Internación -->
-      <fieldset class="bloque">
-        <legend class="bloque__titulo">3. Detalles de la Internación</legend>
+      <fieldset class="bloque" id="seccion-3" data-seccion="3">
+        <legend class="bloque__titulo"><span class="bloque__numero">3</span> Detalles de la Internación</legend>
         <div class="grilla">
           <div class="campo">
             <label for="fecha_internacion">Fecha de Internación <span class="req">*</span></label>
@@ -167,8 +219,8 @@
       </fieldset>
 
       <!-- 4. Declaración -->
-      <fieldset class="bloque">
-        <legend class="bloque__titulo">4. Declaración de Alta Solicitada</legend>
+      <fieldset class="bloque" id="seccion-4" data-seccion="4">
+        <legend class="bloque__titulo"><span class="bloque__numero">4</span> Declaración de Alta Solicitada</legend>
         <p class="declaracion">
           El que suscribe, en pleno uso de sus facultades, solicita la alta voluntaria del
           establecimiento de salud mencionado, asumiendo la responsabilidad total de las
@@ -186,8 +238,8 @@
       </fieldset>
 
       <!-- 5. Firmas y fecha -->
-      <fieldset class="bloque">
-        <legend class="bloque__titulo">5. Firmas y Fecha</legend>
+      <fieldset class="bloque" id="seccion-5" data-seccion="5">
+        <legend class="bloque__titulo"><span class="bloque__numero">5</span> Firmas y Fecha</legend>
         <div class="grilla">
           <div class="campo">
             <label for="grado_parentesco">Grado de Parentesco <span class="opcional">(si firma un representante)</span></label>
@@ -294,7 +346,12 @@
   </div>
 </footer>
 
-<script src="assets/calendario.js?v=8"></script>
-<script src="assets/app.js?v=8"></script>
+<script>
+  // Catálogo de redes servido desde lib/redes.php: el navegador y el
+  // servidor trabajan exactamente con los mismos datos.
+  window.CATALOGO_REDES = <?= catalogo_redes_json() ?>;
+</script>
+<script src="assets/calendario.js?v=14"></script>
+<script src="assets/app.js?v=14"></script>
 </body>
 </html>

@@ -80,12 +80,14 @@ Grado de parentesco, y el cambio de «DNI/Documento» a «Cédula de Identidad/P
 mysqldump -u USUARIO -p sedes_altas > respaldo_antes_de_migrar.sql
 mysql -u USUARIO -p sedes_altas < migracion_v1_a_v2.sql   # campos del formulario nuevo
 mysql -u USUARIO -p sedes_altas < migracion_v2_a_v3.sql   # tabla de usuarios del panel
+mysql -u USUARIO -p sedes_altas < migracion_v3_a_v4.sql   # datos de quien firma el alta
 ```
 
 Las filas anteriores quedan con valores provisionales visibles (`(no registrado)`, edad `0`)
 en los campos que antes no existían; corríjalos a mano si esos registros aún se usan.
 
-Si ya tenía la versión 2 instalada, solo hace falta `migracion_v2_a_v3.sql`.
+Si ya tenía la versión 2 instalada, bastan `migracion_v2_a_v3.sql` y `migracion_v3_a_v4.sql`;
+si venía de la 3, solo esta última.
 
 ### 2. Configurar la conexión
 
@@ -185,6 +187,7 @@ lib/fpdf/                  Librería FPDF 1.86 (incluida, sin Composer)
 schema.sql                 Creación de las tablas MySQL (instalación nueva)
 migracion_v1_a_v2.sql      Actualización de la v1 al formulario nuevo
 migracion_v2_a_v3.sql      Agrega la tabla de usuarios del panel
+migracion_v3_a_v4.sql      Agrega los datos de quien firma el alta
 
 DEPLOY.md                  Guía de despliegue en CapRover
 Dockerfile                 Imagen Apache + mod_php para el despliegue en contenedor
@@ -364,7 +367,7 @@ Acepta JSON o formulario.
 | 2. Paciente | `nombre_paciente`, `edad` (entero), `edad_unidad` (`anios`/`meses`/`dias`), `sexo` (`M`/`F`), `numero_historia_clinica`, `numero_referencia` *(opcional)*, `domicilio` |
 | 3. Internación | `fecha_internacion` (AAAA-MM-DD), `hora_internacion` (HH:MM), `diagnosticos_ingreso`, `fecha_solicitud`, `hora_solicitud`, `diagnosticos_egreso` |
 | 4. Declaración | `motivo_alta` |
-| 5. Firmas | `grado_parentesco` *(opcional)*, `ci_pasaporte` |
+| 5. Firmas | `grado_parentesco` *(opcional)*, `nombre_firmante`, `ci_pasaporte`, `telefono_firmante` *(opcional)*, `direccion_firmante` *(opcional)* |
 
 El servidor rechaza un alta cuya fecha y hora sean anteriores a las de la internación.
 

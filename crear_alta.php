@@ -33,9 +33,12 @@ $camposTexto = array(
     'diagnosticos_egreso'     => array('Diagnósticos de Egreso', true, 300),
     // 4. Declaración de Alta Solicitada
     'motivo_alta'             => array('Motivo de Alta según Paciente', true, 5000),
-    // 5. Firmas y Fecha
+    // 5. Firmas y Fecha (datos de quien firma el alta)
     'grado_parentesco'        => array('Grado de Parentesco', false, 120),
+    'nombre_firmante'         => array('Nombre Completo', true, 255),
     'ci_pasaporte'            => array('N° de Cédula de Identidad/Pasaporte', true, 50),
+    'telefono_firmante'       => array('Teléfono', false, 50),
+    'direccion_firmante'      => array('Dirección', false, 255),
 );
 
 $errores = array();
@@ -157,7 +160,7 @@ if ($errores) {
 }
 
 // Los campos opcionales se guardan como NULL cuando vienen vacíos.
-foreach (array('numero_referencia', 'grado_parentesco') as $opcional) {
+foreach (array('numero_referencia', 'grado_parentesco', 'telefono_firmante', 'direccion_firmante') as $opcional) {
     if ($datos[$opcional] === '') {
         $datos[$opcional] = null;
     }
@@ -174,7 +177,9 @@ $columnas = array(
     'numero_referencia', 'domicilio',
     'fecha_internacion', 'hora_internacion', 'diagnosticos_ingreso',
     'fecha_solicitud', 'hora_solicitud', 'diagnosticos_egreso',
-    'motivo_alta', 'grado_parentesco', 'ci_pasaporte',
+    'motivo_alta',
+    'grado_parentesco', 'nombre_firmante', 'ci_pasaporte',
+    'telefono_firmante', 'direccion_firmante',
 );
 
 try {

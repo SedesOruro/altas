@@ -3,3 +3,4 @@ uploads/altas/*
 !uploads/altas/.htaccess
 data/
 *.log
+.claude

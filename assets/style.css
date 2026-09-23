@@ -494,6 +494,13 @@ select {
   color: var(--gris-700);
 }
 
+/* Aclaracion breve al inicio de un bloque, delante de sus campos. */
+.bloque__nota {
+  margin: 0 0 var(--e-4);
+  font-size: var(--t-sm);
+  color: var(--gris-700);
+}
+
 .declaracion {
   background: var(--azul-suave);
   border-left: 4px solid var(--azul);
@@ -1205,6 +1212,23 @@ body.portada { padding-bottom: 0; }
   }
 
   .campo--ancho { grid-column: 1 / -1; }
+
+  /* Dos campos lado a lado se desalinean en cuanto una etiqueta ocupa dos
+     lineas y la de al lado una sola. En .grilla--alineada cada campo cede
+     sus tres pistas (etiqueta, control y error) a la grilla del bloque, de
+     modo que los controles de una misma fila arrancan siempre a la misma
+     altura. Donde subgrid no exista, la regla se ignora y el bloque se ve
+     como antes. */
+  @supports (grid-template-rows: subgrid) {
+    .grilla--alineada { align-items: start; }
+
+    .grilla--alineada > .campo {
+      display: grid;
+      grid-template-rows: subgrid;
+      grid-row: span 3;
+      row-gap: 0;
+    }
+  }
 }
 
 /* Móvil: los botones ocupan el ancho completo y se apilan en orden. */

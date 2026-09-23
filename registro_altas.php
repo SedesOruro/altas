@@ -17,7 +17,7 @@ require_once __DIR__ . '/lib/redes.php';
 <title>Alta Solicitada — SEDES Oruro</title>
 <meta name="description" content="Sistema de notificación de alta solicitada del Servicio Departamental de Salud de Oruro.">
 <link rel="icon" href="assets/logo-sedes.png" type="image/png">
-<link rel="stylesheet" href="assets/style.css?v=14">
+<link rel="stylesheet" href="assets/style.css?v=15">
 </head>
 <body>
 
@@ -167,7 +167,7 @@ require_once __DIR__ . '/lib/redes.php';
             <p class="campo__error" data-error-de="numero_historia_clinica"></p>
           </div>
           <div class="campo">
-            <label for="numero_referencia">Número de Referencia <span class="opcional">(opcional)</span></label>
+            <label for="numero_referencia">Telefono del Paciente </label>
             <input type="text" id="numero_referencia" name="numero_referencia" maxlength="100" autocomplete="off">
             <p class="campo__error" data-error-de="numero_referencia"></p>
           </div>
@@ -240,17 +240,39 @@ require_once __DIR__ . '/lib/redes.php';
       <!-- 5. Firmas y fecha -->
       <fieldset class="bloque" id="seccion-5" data-seccion="5">
         <legend class="bloque__titulo"><span class="bloque__numero">5</span> Firmas y Fecha</legend>
-        <div class="grilla">
+        <p class="bloque__nota">
+          Datos de la persona que firma el alta: el propio paciente o, si no puede
+          hacerlo, quien lo represente.
+        </p>
+        <div class="grilla grilla--alineada">
           <div class="campo">
-            <label for="grado_parentesco">Grado de Parentesco <span class="opcional">(si firma un representante)</span></label>
+            <label for="grado_parentesco">Grado de Parentesco <span class="opcional">(si aplica)</span></label>
             <input type="text" id="grado_parentesco" name="grado_parentesco" maxlength="120" autocomplete="off"
                    placeholder="Ej.: madre, hijo, cónyuge">
             <p class="campo__error" data-error-de="grado_parentesco"></p>
           </div>
           <div class="campo">
+            <label for="nombre_firmante">Nombre Completo <span class="req">*</span></label>
+            <input type="text" id="nombre_firmante" name="nombre_firmante" maxlength="255" autocomplete="off" required
+                   placeholder="Nombres y apellidos de quien firma">
+            <p class="campo__error" data-error-de="nombre_firmante"></p>
+          </div>
+          <div class="campo">
             <label for="ci_pasaporte">N° de Cédula de Identidad/Pasaporte <span class="req">*</span></label>
             <input type="text" id="ci_pasaporte" name="ci_pasaporte" maxlength="50" autocomplete="off" required>
             <p class="campo__error" data-error-de="ci_pasaporte"></p>
+          </div>
+          <div class="campo">
+            <label for="telefono_firmante">Teléfono <span class="opcional">(opcional)</span></label>
+            <input type="tel" id="telefono_firmante" name="telefono_firmante" maxlength="50"
+                   inputmode="tel" autocomplete="off" placeholder="Ej.: 71234567">
+            <p class="campo__error" data-error-de="telefono_firmante"></p>
+          </div>
+          <div class="campo campo--ancho">
+            <label for="direccion_firmante">Dirección <span class="opcional">(opcional)</span></label>
+            <input type="text" id="direccion_firmante" name="direccion_firmante" maxlength="255" autocomplete="off"
+                   placeholder="Calle, número y zona de quien firma">
+            <p class="campo__error" data-error-de="direccion_firmante"></p>
           </div>
         </div>
         <p class="aviso">
@@ -352,6 +374,6 @@ require_once __DIR__ . '/lib/redes.php';
   window.CATALOGO_REDES = <?= catalogo_redes_json() ?>;
 </script>
 <script src="assets/calendario.js?v=14"></script>
-<script src="assets/app.js?v=14"></script>
+<script src="assets/app.js?v=15"></script>
 </body>
 </html>

@@ -134,7 +134,10 @@
         celdaLarga(a.diagnosticos_egreso) +
         celdaLarga(a.motivo_alta) +
         '<td>' + esc(a.grado_parentesco || '—') + '</td>' +
+        celdaLarga(a.nombre_firmante || '—') +
         '<td>' + esc(a.ci_pasaporte) + '</td>' +
+        '<td class="text-nowrap">' + esc(a.telefono_firmante || '—') + '</td>' +
+        celdaLarga(a.direccion_firmante || '—') +
         '<td class="text-nowrap">' + (a.adjunto_id ? fechaHora(a.adjunto_fecha) : '—') + '</td>' +
         '<td class="text-nowrap">' + fechaHora(a.created_at) + '</td>' +
       '</tr>';

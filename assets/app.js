@@ -415,6 +415,7 @@
       hora_solicitud:          'Indique la hora de la solicitud.',
       diagnosticos_egreso:     'Indique los diagnósticos de egreso.',
       motivo_alta:             'Describa el motivo de alta expresado por el paciente.',
+      nombre_firmante:         'Indique el nombre completo de quien firma el alta.',
       ci_pasaporte:            'Indique el número de cédula de identidad o pasaporte.'
     };
 

@@ -364,10 +364,10 @@ function construir_pdf_alta(array $a)
         array('Edad:', $edad, 1.1),
         array('Sexo:', $sexo, 1.1),
     ));
+    // Historia clinica y referencia comparten fila: son dos numeros cortos y
+    // juntarlos deja sitio para los datos del firmante sin pasar a dos hojas.
     $pdf->fila(array(
         array('Número de Historia Clínica:', $a['numero_historia_clinica']),
-    ));
-    $pdf->fila(array(
         array('Número de Referencia:', isset($a['numero_referencia']) ? $a['numero_referencia'] : ''),
     ));
     $pdf->fila(array(
@@ -409,9 +409,21 @@ function construir_pdf_alta(array $a)
     // ---- 5. Firmas y Fecha --------------------------------------------
     $pdf->seccion('5. Firmas y Fecha:');
 
+    // Datos de quien firma, en el mismo orden que el formulario en pantalla.
+    $campo = function ($clave) use ($a) {
+        return isset($a[$clave]) && $a[$clave] !== null ? $a[$clave] : '';
+    };
+
     $pdf->fila(array(
-        array('Grado de Parentesco:', isset($a['grado_parentesco']) ? $a['grado_parentesco'] : ''),
+        array('Grado de Parentesco:', $campo('grado_parentesco')),
+        array('Nombre Completo:', $campo('nombre_firmante')),
+    ));
+    $pdf->fila(array(
         array('N° de Cédula de Identidad/Pasaporte:', $a['ci_pasaporte']),
+        array('Teléfono:', $campo('telefono_firmante')),
+    ));
+    $pdf->fila(array(
+        array('Dirección:', $campo('direccion_firmante')),
     ));
 
     // Encabezamiento de lugar y fecha, con la fecha en que se solicita el

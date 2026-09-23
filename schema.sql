@@ -43,7 +43,10 @@ CREATE TABLE IF NOT EXISTS altas (
 
   -- 5. Firmas y Fecha
   grado_parentesco VARCHAR(120) NULL,
+  nombre_firmante VARCHAR(255) NOT NULL,
   ci_pasaporte VARCHAR(50) NOT NULL,
+  telefono_firmante VARCHAR(50) NULL,
+  direccion_firmante VARCHAR(255) NULL,
 
   estado ENUM('generado','verificado','rechazado') DEFAULT 'generado',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

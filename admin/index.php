@@ -129,13 +129,16 @@ admin_cabecera('Altas registradas', 'panel');
             <th>Diagnósticos de egreso</th>
             <th>Motivo del alta</th>
             <th>Parentesco</th>
+            <th>Nombre del firmante</th>
             <th>CI/Pasaporte</th>
+            <th>Teléfono</th>
+            <th>Dirección</th>
             <th>Documento firmado</th>
             <th>Registrada</th>
           </tr>
         </thead>
         <tbody id="cuerpo-tabla">
-          <tr><td colspan="22" class="text-center text-muted py-4">Cargando…</td></tr>
+          <tr><td colspan="25" class="text-center text-muted py-4">Cargando…</td></tr>
         </tbody>
       </table>
     </div>
@@ -155,4 +158,4 @@ admin_cabecera('Altas registradas', 'panel');
   </div>
 </div>
 
-<?php admin_pie(array('assets/admin.js?v=4')); ?>
+<?php admin_pie(array('assets/admin.js?v=5')); ?>

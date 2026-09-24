@@ -1,13 +1,26 @@
 <?php
 /**
- * Formulario público de altas.
+ * Formulario de altas.
  *
- * Es PHP y no HTML plano por un solo motivo: las opciones de «Red de Salud»
- * y de «Establecimiento» se pintan desde `lib/redes.php`, el mismo catálogo
- * que usa el servidor para validar lo que llega. Así no hay dos listas que
- * mantener en paralelo.
+ * Exige sesión: lo llena el personal del establecimiento —operador o
+ * administrador—, no el público. Quien llega sin sesión pasa por el login
+ * y vuelve aquí.
+ *
+ * Es PHP y no HTML plano por un segundo motivo: las opciones de «Red de
+ * Salud» y de «Establecimiento» se pintan desde `lib/redes.php`, el mismo
+ * catálogo que usa el servidor para validar lo que llega. Así no hay dos
+ * listas que mantener en paralelo.
  */
+require_once __DIR__ . '/lib/auth.php';
 require_once __DIR__ . '/lib/redes.php';
+
+$sesion = exigir_sesion();
+$base   = ruta_base();
+
+// Establecimiento de la cuenta. Cuando existe, la sección 1 no se elige:
+// se muestra fija y el servidor la toma de la sesión. El administrador no
+// tiene ninguno asignado y sigue viendo los desplegables completos.
+$miEstablecimiento = establecimiento_de_sesion();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -17,7 +30,7 @@ require_once __DIR__ . '/lib/redes.php';
 <title>Alta Solicitada — SEDES Oruro</title>
 <meta name="description" content="Sistema de notificación de alta solicitada del Servicio Departamental de Salud de Oruro.">
 <link rel="icon" href="assets/logo-sedes.png" type="image/png">
-<link rel="stylesheet" href="assets/style.css?v=15">
+<link rel="stylesheet" href="assets/style.css?v=16">
 </head>
 <body>
 
@@ -30,7 +43,7 @@ require_once __DIR__ . '/lib/redes.php';
       <p class="cabecera__institucion">Servicio Departamental de Salud — Oruro</p>
       <h1 class="cabecera__titulo">Formulario de Notificación de Alta Solicitada</h1>
     </div>
-    <a class="cabecera__volver" href="index.html">← Inicio</a>
+    <a class="cabecera__volver" href="<?= h($base) ?>admin/index.php">← Volver al panel</a>
   </div>
 </header>
 
@@ -92,7 +105,26 @@ require_once __DIR__ . '/lib/redes.php';
       <!-- 1. Establecimiento -->
       <fieldset class="bloque" id="seccion-1" data-seccion="1">
         <legend class="bloque__titulo"><span class="bloque__numero">1</span> Datos del Establecimiento de Salud</legend>
+        <?php if ($miEstablecimiento): ?>
+          <!-- Cuenta atada a un establecimiento: los tres datos vienen de
+               la sesión. Se muestran para que quien llena vea a nombre de
+               quién está registrando, pero no se envían: el servidor los
+               resuelve por su cuenta. -->
+          <div class="grilla">
+            <div class="campo campo--ancho">
+              <p class="fijo" role="group" aria-label="Establecimiento de la cuenta">
+                <span class="fijo__etiqueta">Registrando a nombre de</span>
+                <strong class="fijo__valor"><?= h($miEstablecimiento['nombre_establecimiento']) ?></strong>
+                <span class="fijo__detalle">
+                  <?= h($miEstablecimiento['red_salud']) ?> · <?= h($miEstablecimiento['municipio']) ?>
+                </span>
+              </p>
+            </div>
+          </div>
+        <?php endif; ?>
+
         <div class="grilla">
+          <?php if (!$miEstablecimiento): ?>
           <!-- La red manda: al elegirla se completan el municipio y la lista
                de establecimientos que le corresponden. -->
           <div class="campo">
@@ -122,6 +154,7 @@ require_once __DIR__ . '/lib/redes.php';
             </select>
             <p class="campo__error" data-error-de="nombre_establecimiento"></p>
           </div>
+          <?php endif; ?>
 
           <div class="campo campo--ancho">
             <label for="servicio_unidad">Servicio/Unidad <span class="req">*</span></label>
@@ -363,8 +396,12 @@ require_once __DIR__ . '/lib/redes.php';
 </main>
 
 <footer class="pie">
-  <div class="contenedor">
+  <div class="contenedor pie__interior">
     <p>SEDES Oruro — Sistema de Notificación de Alta Solicitada</p>
+    <p class="pie__sesion">
+      <?= h($sesion['nombre_completo']) ?> (<?= h(nombre_rol($sesion['rol'])) ?>) ·
+      <a href="<?= h($base) ?>salir.php">Cerrar sesión</a>
+    </p>
   </div>
 </footer>
 
@@ -374,6 +411,6 @@ require_once __DIR__ . '/lib/redes.php';
   window.CATALOGO_REDES = <?= catalogo_redes_json() ?>;
 </script>
 <script src="assets/calendario.js?v=14"></script>
-<script src="assets/app.js?v=15"></script>
+<script src="assets/app.js?v=16"></script>
 </body>
 </html>

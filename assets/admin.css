@@ -51,6 +51,49 @@ body { font-size: 15px; }
 .badge-danger { background-color: #b3261e; color: #fff; }
 .badge-secondary { background-color: #5c4a3f; color: #fff; }
 
+/* Rol de la cuenta. Dos tonos bien distintos entre si y ambos por encima
+   de 4.5:1 con su texto, para que se distingan tambien en una pantalla
+   mala o impresos en blanco y negro. */
+/* Barra con la accion principal del modulo de altas. Va antes de la tabla
+   porque para el operador es lo primero que viene a hacer. */
+.barra-accion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 14px;
+}
+
+.btn-accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 18px;
+  font-weight: 700;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(122, 59, 12, .18);
+}
+
+.btn-accion .icono { flex: none; }
+
+@media (max-width: 575px) {
+  .barra-accion { flex-direction: column; align-items: stretch; }
+  .btn-accion { justify-content: center; }
+}
+
+/* Establecimiento al que esta acotado el listado, junto al titulo. */
+.card-title__alcance {
+  font-weight: 400;
+  color: #6b5b52;
+}
+
+.badge-rol { text-transform: none; letter-spacing: 0.2px; }
+.badge-rol--admin { background-color: #7a3b0c; color: #fff; }
+.badge-rol--operador { background-color: #dfe6ee; color: #253546; }
+
+.navbar-text .badge-rol { font-size: 10.5px; vertical-align: middle; }
+
 /* Mismo motivo en los botones pequeños de la columna «Opciones». */
 .btn-primary { background-color: var(--marca); border-color: var(--marca); }
 .btn-primary:hover, .btn-primary:focus { background-color: var(--marca-fuerte); border-color: var(--marca-fuerte); }

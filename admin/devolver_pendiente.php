@@ -11,6 +11,9 @@
  * panel muestra siempre el último— porque es un documento clínico firmado y
  * eliminarlo con un clic no debería ser una operación de rutina.
  *
+ * Es una acción de administración: el operador registra altas y sube
+ * documentos, pero no revierte el estado de un alta ya verificada.
+ *
  * Entrada: POST con `codigo_alta`, `csrf` y, opcionalmente, `motivo`.
  * Salida: JSON.
  */
@@ -18,7 +21,7 @@
 require_once __DIR__ . '/../lib/auth.php';
 
 exigir_metodo('POST');
-$sesion = exigir_sesion_json();
+$sesion = exigir_administrador_json();
 
 $in = entrada_post();
 

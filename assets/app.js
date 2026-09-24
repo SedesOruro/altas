@@ -191,7 +191,8 @@
     ponerValor($('#fecha_solicitud'), formatoFechaHoy());
     ponerValor($('#hora_solicitud'), formatoHoraAhora());
     actualizarProgreso();
-    $('#red_salud').focus();
+    var primero = $('#red_salud') || $('#servicio_unidad');
+    if (primero) { primero.focus(); }
   });
 
   /** Deja la Sección A como al entrar: solo el botón «Nueva Solicitud de Alta». */
@@ -250,7 +251,13 @@
   var campoMunicipio = $('#municipio');
   var selectEstab    = $('#nombre_establecimiento');
 
+  // Una cuenta atada a un establecimiento no pinta estos tres campos: los
+  // resuelve el servidor desde la sesión. Todo lo que sigue se vuelve
+  // entonces inofensivo.
+  var ELIGE_ESTABLECIMIENTO = !!(selectRed && campoMunicipio && selectEstab);
+
   function aplicarRed(conservarEstablecimiento) {
+    if (!ELIGE_ESTABLECIMIENTO) { return; }
     var red  = selectRed.value;
     var info = catalogoRedes[red];
 
@@ -285,10 +292,12 @@
     }
   }
 
-  selectRed.addEventListener('change', function () {
-    aplicarRed(false);
-    limpiarErrores(formAlta);
-  });
+  if (ELIGE_ESTABLECIMIENTO) {
+    selectRed.addEventListener('change', function () {
+      aplicarRed(false);
+      limpiarErrores(formAlta);
+    });
+  }
 
   aplicarRed(false);
 
@@ -421,7 +430,11 @@
 
     Object.keys(obligatorios).forEach(function (nombre) {
       var campo = formAlta.elements[nombre];
-      if (!campo || String(campo.value).trim() === '') {
+      // Un campo que no está en la página es uno que pone el servidor
+      // (la red y el establecimiento de una cuenta con establecimiento
+      // asignado): no hay nada que reclamarle al usuario.
+      if (!campo) { return; }
+      if (String(campo.value).trim() === '') {
         errores.push({ campo: nombre, mensaje: obligatorios[nombre] });
       }
     });

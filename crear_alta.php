@@ -9,9 +9,15 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib/auth.php';
 require_once __DIR__ . '/lib/redes.php';
 
 exigir_metodo('POST');
+
+// El formulario dejó de ser público: registrar un alta es trabajo del
+// personal autenticado, sea operador o administrador.
+$sesion = exigir_sesion_json();
+
 limitar_intentos('crear', 40, 600);
 
 $in = entrada_post();
@@ -56,30 +62,44 @@ foreach ($camposTexto as $clave => $def) {
 // ---------------------------------------------------------------------
 // Red de salud, municipio y establecimiento
 //
-// Los tres salen del catálogo de lib/redes.php: la red decide el municipio
-// y acota los establecimientos posibles. Se comprueba aquí y no solo en el
-// navegador, porque una petición puede llegar sin pasar por el formulario.
+// Hay dos caminos, y el que manda es el de la cuenta:
+//
+//   - Con establecimiento asignado (el operador), los tres datos salen de
+//     la sesión y lo que traiga el formulario se descarta. Eso es lo que
+//     impide registrar un alta a nombre de otro hospital manipulando la
+//     petición, venga o no del formulario.
+//   - Sin asignación (el administrador), se eligen y se validan contra el
+//     catálogo de lib/redes.php: la red decide el municipio y acota los
+//     establecimientos posibles.
 // ---------------------------------------------------------------------
-$red = limpiar_texto(isset($in['red_salud']) ? $in['red_salud'] : '', 255);
+$miEstablecimiento = establecimiento_de_sesion();
 
-if ($red === '') {
-    $errores['red_salud'] = 'Seleccione la red de salud.';
-} elseif (!red_valida($red)) {
-    $errores['red_salud'] = 'La red de salud indicada no pertenece al catálogo del SEDES Oruro.';
+if ($miEstablecimiento) {
+    $datos['red_salud']              = $miEstablecimiento['red_salud'];
+    $datos['municipio']              = $miEstablecimiento['municipio'];
+    $datos['nombre_establecimiento'] = $miEstablecimiento['nombre_establecimiento'];
 } else {
-    $datos['red_salud'] = $red;
+    $red = limpiar_texto(isset($in['red_salud']) ? $in['red_salud'] : '', 255);
 
-    // El municipio no se toma del cliente: se deriva de la red, que es lo
-    // que evita que lleguen combinaciones imposibles.
-    $datos['municipio'] = municipio_de_red($red);
-
-    $establecimiento = limpiar_texto(isset($in['nombre_establecimiento']) ? $in['nombre_establecimiento'] : '', 255);
-    if ($establecimiento === '') {
-        $errores['nombre_establecimiento'] = 'Seleccione el establecimiento de salud.';
-    } elseif (!establecimiento_de_red($red, $establecimiento)) {
-        $errores['nombre_establecimiento'] = 'Ese establecimiento no corresponde a la red «' . $red . '».';
+    if ($red === '') {
+        $errores['red_salud'] = 'Seleccione la red de salud.';
+    } elseif (!red_valida($red)) {
+        $errores['red_salud'] = 'La red de salud indicada no pertenece al catálogo del SEDES Oruro.';
     } else {
-        $datos['nombre_establecimiento'] = $establecimiento;
+        $datos['red_salud'] = $red;
+
+        // El municipio no se toma del cliente: se deriva de la red, que es
+        // lo que evita que lleguen combinaciones imposibles.
+        $datos['municipio'] = municipio_de_red($red);
+
+        $establecimiento = limpiar_texto(isset($in['nombre_establecimiento']) ? $in['nombre_establecimiento'] : '', 255);
+        if ($establecimiento === '') {
+            $errores['nombre_establecimiento'] = 'Seleccione el establecimiento de salud.';
+        } elseif (!establecimiento_de_red($red, $establecimiento)) {
+            $errores['nombre_establecimiento'] = 'Ese establecimiento no corresponde a la red «' . $red . '».';
+        } else {
+            $datos['nombre_establecimiento'] = $establecimiento;
+        }
     }
 }
 

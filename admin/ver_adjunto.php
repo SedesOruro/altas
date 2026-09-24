@@ -9,6 +9,10 @@
  * firma del paciente, así que no se sirven desde una URL pública. El
  * archivo se lee del disco y se envía desde aquí, nunca enlazando
  * directamente a la carpeta `uploads/`.
+ *
+ * Y no basta con tener sesión: un operador solo recibe los documentos de
+ * su propio establecimiento. Sin esta comprobación, el filtro del listado
+ * sería decorativo, porque bastaría con probar identificadores.
  */
 
 require_once __DIR__ . '/../lib/auth.php';
@@ -28,7 +32,7 @@ if ($id <= 0) {
 
 try {
     $st = db()->prepare(
-        'SELECT ad.*, a.codigo_alta
+        'SELECT ad.*, a.codigo_alta, a.nombre_establecimiento
          FROM alta_adjuntos ad
          INNER JOIN altas a ON a.id = ad.alta_id
          WHERE ad.id = ? LIMIT 1'
@@ -42,6 +46,10 @@ try {
 
 if (!$adjunto) {
     error_json('El documento solicitado no existe.', 404);
+}
+
+if (!puede_ver_establecimiento($adjunto['nombre_establecimiento'])) {
+    error_json('El documento solicitado pertenece a otro establecimiento de salud.', 403);
 }
 
 // El nombre guardado se construyó en el servidor, pero se vuelve a acotar

@@ -13,11 +13,14 @@
  *
  * Todas las acciones van por POST con testigo anti-CSRF y responden con una
  * redirección, para que al recargar la página no se repita la operación.
+ *
+ * La pantalla es solo para administradores: un operador que llegue aquí
+ * vuelve a su listado de altas.
  */
 
 require_once __DIR__ . '/_plantilla.php';
 
-$sesion = exigir_sesion();
+$sesion = exigir_administrador();
 $aviso  = '';
 $error  = '';
 
@@ -41,8 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($accion === 'estado') {
             $activo = !empty($_POST['activar']) ? 1 : 0;
 
+            $destino = $id > 0 ? buscar_usuario($id) : null;
+
             if ($id === $sesion['id'] && $activo === 0) {
                 $error = 'No puede desactivar su propia cuenta.';
+            } elseif ($activo === 0 && $destino && $destino['rol'] === ROL_ADMINISTRADOR
+                      && !hay_otro_administrador($id)) {
+                // Desactivar es otra forma de quitar el acceso: si se lo
+                // quitamos al único administrador, nadie podría devolverlo.
+                $error = 'No se puede desactivar la única cuenta de administrador activa.';
             } elseif ($id > 0) {
                 try {
                     db()->prepare('UPDATE usuarios SET activo = ? WHERE id = ?')->execute(array($activo, $id));
@@ -67,8 +77,9 @@ if ($aviso === '' && isset($_GET['aviso'])) {
 $usuarios = array();
 try {
     $usuarios = db()->query(
-        'SELECT id, username, nombre_completo, ci, telefono, correo, activo, ultimo_acceso, created_at
-         FROM usuarios ORDER BY nombre_completo'
+        'SELECT id, username, nombre_completo, ci, telefono, correo, rol,
+                red_salud, nombre_establecimiento, activo, ultimo_acceso, created_at
+         FROM usuarios ORDER BY rol, nombre_completo'
     )->fetchAll();
 } catch (Exception $e) {
     error_log('[altas] usuarios listado: ' . $e->getMessage());
@@ -106,6 +117,8 @@ admin_cabecera('Usuarios', 'usuarios');
           <th>CI</th>
           <th>Teléfono</th>
           <th>Correo electrónico</th>
+          <th>Rol</th>
+          <th>Establecimiento</th>
           <th>Estado</th>
           <th>Último acceso</th>
           <th>Alta</th>
@@ -114,7 +127,7 @@ admin_cabecera('Usuarios', 'usuarios');
       </thead>
       <tbody>
         <?php if (!$usuarios): ?>
-          <tr><td colspan="9" class="text-center text-muted py-4">No hay usuarios registrados.</td></tr>
+          <tr><td colspan="11" class="text-center text-muted py-4">No hay usuarios registrados.</td></tr>
         <?php endif; ?>
 
         <?php foreach ($usuarios as $u): ?>
@@ -130,6 +143,21 @@ admin_cabecera('Usuarios', 'usuarios');
             <td><?= h($u['ci']) ?></td>
             <td class="text-nowrap"><?= h($u['telefono']) ?></td>
             <td><?= h($u['correo']) ?></td>
+            <td>
+              <?php if ($u['rol'] === ROL_ADMINISTRADOR): ?>
+                <span class="badge badge-rol badge-rol--admin">Administrador</span>
+              <?php else: ?>
+                <span class="badge badge-rol badge-rol--operador">Operador</span>
+              <?php endif; ?>
+            </td>
+            <td>
+              <?php if ($u['nombre_establecimiento']): ?>
+                <?= h($u['nombre_establecimiento']) ?>
+                <br><small class="text-muted"><?= h($u['red_salud']) ?></small>
+              <?php else: ?>
+                <span class="text-muted">Todos</span>
+              <?php endif; ?>
+            </td>
             <td>
               <?php if ((int) $u['activo'] === 1): ?>
                 <span class="badge badge-success">Activa</span>
@@ -177,6 +205,9 @@ admin_cabecera('Usuarios', 'usuarios');
     <strong>Desactivar</strong> retira el acceso y conserva el registro de entradas;
     <strong>Eliminar</strong> borra la cuenta de forma definitiva. No se puede eliminar la
     propia cuenta ni la última que quede en el sistema.
+    El <strong>administrador</strong> ve y administra todo; el <strong>operador</strong>
+    registra altas y consulta el listado <strong>de su establecimiento</strong>. Siempre debe quedar al menos un administrador
+    activo.
   </div>
 </div>
 

@@ -12,8 +12,10 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib/auth.php';
 
 exigir_metodo('POST');
+$sesion = exigir_sesion_json();
 limitar_intentos('subir', 20, 600);
 
 // ---------------------------------------------------------------------
@@ -37,6 +39,11 @@ try {
 
 if (!$alta) {
     error_json('El código de alta ingresado no corresponde a ninguna solicitud registrada.', 404);
+}
+
+// Cada establecimiento sube los documentos de sus propias altas.
+if (!puede_ver_establecimiento($alta['nombre_establecimiento'])) {
+    error_json('Ese código corresponde a otro establecimiento de salud.', 403);
 }
 
 // Un alta ya verificada no admite otra carga: lo que bloquea es el estado,

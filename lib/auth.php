@@ -6,10 +6,39 @@
  * todo lo relativo a iniciar y cerrar sesión, proteger páginas y emitir y
  * comprobar los testigos anti-CSRF de los formularios del panel.
  *
- * El formulario público de altas no pasa por aquí: sigue siendo abierto.
+ * Hay dos roles, y la diferencia es de alcance, no de confianza:
+ *
+ *   administrador  el panel completo: altas, usuarios y las acciones que
+ *                  cambian el estado de un alta.
+ *   operador       entra a registrar altas y a consultar el listado, y lo
+ *                  hace siempre a nombre del establecimiento que tiene
+ *                  asignado en su cuenta.
+ *
+ * El formulario de altas tambien pasa por aquí: dejó de ser público cuando
+ * se creó el rol de operador, que es quien lo llena.
  */
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/redes.php';
+
+define('ROL_ADMINISTRADOR', 'administrador');
+define('ROL_OPERADOR', 'operador');
+
+/** Los dos roles, con su nombre para mostrar. */
+function roles_disponibles()
+{
+    return array(
+        ROL_ADMINISTRADOR => 'Administrador',
+        ROL_OPERADOR      => 'Operador',
+    );
+}
+
+/** Nombre legible de un rol. */
+function nombre_rol($rol)
+{
+    $roles = roles_disponibles();
+    return isset($roles[$rol]) ? $roles[$rol] : $rol;
+}
 
 // ---------------------------------------------------------------------
 // Sesión
@@ -51,6 +80,10 @@ function usuario_actual()
         'id'              => (int) $_SESSION['usuario_id'],
         'username'        => isset($_SESSION['username']) ? $_SESSION['username'] : '',
         'nombre_completo' => isset($_SESSION['nombre_completo']) ? $_SESSION['nombre_completo'] : '',
+        'rol'             => isset($_SESSION['rol']) ? $_SESSION['rol'] : ROL_OPERADOR,
+        'red_salud'       => isset($_SESSION['red_salud']) ? $_SESSION['red_salud'] : null,
+        'nombre_establecimiento' => isset($_SESSION['nombre_establecimiento'])
+            ? $_SESSION['nombre_establecimiento'] : null,
     );
 }
 
@@ -80,6 +113,16 @@ function exigir_sesion()
         }
 
         if ($vigente && (int) $vigente['activo'] === 1) {
+            // El rol se relee de la base en cada petición: si un
+            // administrador cambia el de alguien que está dentro, el
+            // cambio vale desde la página siguiente y no al reingresar.
+            $_SESSION['rol']                    = $vigente['rol'];
+            $_SESSION['red_salud']              = $vigente['red_salud'];
+            $_SESSION['nombre_establecimiento'] = $vigente['nombre_establecimiento'];
+
+            $yo['rol']                    = $vigente['rol'];
+            $yo['red_salud']              = $vigente['red_salud'];
+            $yo['nombre_establecimiento'] = $vigente['nombre_establecimiento'];
             return $yo;
         }
 
@@ -93,6 +136,61 @@ function exigir_sesion()
     exit;
 }
 
+/**
+ * Establecimiento al que está atada la sesión, o null si no tiene ninguno.
+ *
+ * Devuelve array('red_salud' => ..., 'municipio' => ..., 'nombre_establecimiento' => ...).
+ * Es la única fuente válida para registrar un alta: lo que llegue en el
+ * formulario se descarta cuando esto no es null.
+ */
+function establecimiento_de_sesion()
+{
+    $yo = usuario_actual();
+    if (!$yo || empty($yo['nombre_establecimiento']) || empty($yo['red_salud'])) {
+        return null;
+    }
+    return array(
+        'red_salud'              => $yo['red_salud'],
+        'municipio'              => municipio_de_red($yo['red_salud']),
+        'nombre_establecimiento' => $yo['nombre_establecimiento'],
+    );
+}
+
+/**
+ * ¿Esta sesión puede ver un alta de ese establecimiento?
+ *
+ * El administrador los abarca todos; el operador, solo el suyo. Se
+ * comprueba en cada entrega de datos de un alta concreta (PDF, adjunto,
+ * verificación de código), no solo al pintar el listado.
+ */
+function puede_ver_establecimiento($establecimiento)
+{
+    $mio = establecimiento_de_sesion();
+    return $mio === null || $mio['nombre_establecimiento'] === $establecimiento;
+}
+
+/** ¿La sesión actual es de un administrador? */
+function es_administrador()
+{
+    $yo = usuario_actual();
+    return $yo !== null && $yo['rol'] === ROL_ADMINISTRADOR;
+}
+
+/**
+ * Protege una página reservada al administrador. Un operador autenticado no
+ * se queda fuera del panel: vuelve a su pantalla de altas con un aviso, que
+ * es menos desconcertante que un 403 en blanco.
+ */
+function exigir_administrador()
+{
+    $yo = exigir_sesion();
+    if ($yo['rol'] !== ROL_ADMINISTRADOR) {
+        header('Location: ' . ruta_base() . 'admin/index.php?aviso=solo_administrador');
+        exit;
+    }
+    return $yo;
+}
+
 /** Variante para los scripts que responden JSON: 401 en vez de redirección. */
 function exigir_sesion_json()
 {
@@ -100,6 +198,16 @@ function exigir_sesion_json()
         error_json('Su sesión expiró. Vuelva a iniciar sesión.', 401);
     }
     return usuario_actual();
+}
+
+/** Igual que exigir_administrador(), para los scripts que responden JSON. */
+function exigir_administrador_json()
+{
+    $yo = exigir_sesion_json();
+    if ($yo['rol'] !== ROL_ADMINISTRADOR) {
+        error_json('Esta acción está reservada al administrador del sistema.', 403);
+    }
+    return $yo;
 }
 
 /**
@@ -177,6 +285,9 @@ function iniciar_sesion($usuarioOCorreo, $clave)
     $_SESSION['usuario_id']      = (int) $usuario['id'];
     $_SESSION['username']        = $usuario['username'];
     $_SESSION['nombre_completo'] = $usuario['nombre_completo'];
+    $_SESSION['rol']             = $usuario['rol'];
+    $_SESSION['red_salud']              = $usuario['red_salud'];
+    $_SESSION['nombre_establecimiento'] = $usuario['nombre_establecimiento'];
 
     db()->prepare('UPDATE usuarios SET ultimo_acceso = NOW() WHERE id = ?')
         ->execute(array((int) $usuario['id']));
@@ -261,6 +372,39 @@ function validar_datos_usuario(array $in, $idExcluir = null, $claveOpcional = fa
         $errores['correo'] = 'El correo electrónico no tiene un formato válido.';
     }
 
+    // El rol viene de una lista cerrada. El primer usuario del sistema es
+    // administrador por definición: si no lo fuera, nadie podría crear a
+    // los demás ni administrar el panel.
+    $rol = isset($in['rol']) ? (string) $in['rol'] : '';
+    if (sin_usuarios()) {
+        $rol = ROL_ADMINISTRADOR;
+    } elseif (!array_key_exists($rol, roles_disponibles())) {
+        $errores['rol'] = 'Seleccione el rol de la cuenta.';
+    }
+
+    // Red y establecimiento: obligatorios para el operador, porque son los
+    // que el formulario va a dar por sentados; vacíos para el
+    // administrador, que no está atado a ninguno.
+    $red             = limpiar_texto(isset($in['red_salud']) ? $in['red_salud'] : '', 255);
+    $establecimiento = limpiar_texto(isset($in['nombre_establecimiento']) ? $in['nombre_establecimiento'] : '', 255);
+
+    if ($rol === ROL_ADMINISTRADOR) {
+        $red             = null;
+        $establecimiento = null;
+    } else {
+        if ($red === '') {
+            $errores['red_salud'] = 'Seleccione la red de salud del operador.';
+        } elseif (!red_valida($red)) {
+            $errores['red_salud'] = 'Esa red no pertenece al catálogo del SEDES Oruro.';
+        }
+
+        if ($establecimiento === '') {
+            $errores['nombre_establecimiento'] = 'Seleccione el establecimiento del operador.';
+        } elseif (!isset($errores['red_salud']) && !establecimiento_de_red($red, $establecimiento)) {
+            $errores['nombre_establecimiento'] = 'Ese establecimiento no corresponde a la red «' . $red . '».';
+        }
+    }
+
     $clave   = isset($in['clave']) ? (string) $in['clave'] : '';
     $repetir = isset($in['clave_repetida']) ? (string) $in['clave_repetida'] : '';
 
@@ -312,6 +456,9 @@ function validar_datos_usuario(array $in, $idExcluir = null, $claveOpcional = fa
         'ci'              => $ci,
         'telefono'        => $telefono,
         'correo'          => $correo,
+        'rol'             => $rol,
+        'red_salud'       => $red,
+        'nombre_establecimiento' => $establecimiento,
         'clave'           => $cambiaClave ? $clave : null,
     ));
 }
@@ -331,17 +478,42 @@ function registrar_usuario(array $in)
 
     try {
         $st = db()->prepare(
-            'INSERT INTO usuarios (username, nombre_completo, ci, telefono, correo, password_hash)
-             VALUES (?, ?, ?, ?, ?, ?)'
+            'INSERT INTO usuarios
+               (username, nombre_completo, ci, telefono, correo, rol,
+                red_salud, nombre_establecimiento, password_hash)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $st->execute(array(
-            $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'],
+            $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'], $d['rol'],
+            $d['red_salud'], $d['nombre_establecimiento'],
             password_hash($d['clave'], PASSWORD_DEFAULT),
         ));
         return array('ok' => true, 'id' => (int) db()->lastInsertId());
     } catch (Exception $e) {
         error_log('[altas] registrar_usuario: ' . $e->getMessage());
         return array('errores' => array('general' => 'No fue posible registrar el usuario. Intente nuevamente.'));
+    }
+}
+
+/**
+ * ¿Queda algún administrador activo aparte del usuario indicado?
+ *
+ * Es la comprobación que impide quedarse sin nadie que administre el panel,
+ * ya sea rebajando de rol al último administrador o eliminándolo.
+ */
+function hay_otro_administrador($idExcluido)
+{
+    try {
+        $st = db()->prepare(
+            'SELECT COUNT(*) FROM usuarios WHERE rol = ? AND activo = 1 AND id <> ?'
+        );
+        $st->execute(array(ROL_ADMINISTRADOR, (int) $idExcluido));
+        return (int) $st->fetchColumn() > 0;
+    } catch (Exception $e) {
+        error_log('[altas] hay_otro_administrador: ' . $e->getMessage());
+        // Ante la duda, se responde que no: bloquear un cambio es
+        // reversible; quedarse sin administrador, no.
+        return false;
     }
 }
 
@@ -373,25 +545,39 @@ function actualizar_usuario($id, array $in)
     }
     $d = $revision['datos'];
 
+    // Rebajar al último administrador dejaría el sistema sin nadie que
+    // pueda crear usuarios ni administrar las altas, y sin forma de
+    // deshacerlo desde el propio panel.
+    if ($d['rol'] !== ROL_ADMINISTRADOR && !hay_otro_administrador($id)) {
+        return array('errores' => array(
+            'rol' => 'Esta es la única cuenta de administrador activa. Nombre a otro '
+                   . 'administrador antes de cambiarle el rol.',
+        ));
+    }
+
     try {
         if ($d['clave'] !== null) {
             $st = db()->prepare(
                 'UPDATE usuarios
-                    SET username = ?, nombre_completo = ?, ci = ?, telefono = ?, correo = ?, password_hash = ?
+                    SET username = ?, nombre_completo = ?, ci = ?, telefono = ?, correo = ?,
+                        rol = ?, red_salud = ?, nombre_establecimiento = ?, password_hash = ?
                   WHERE id = ?'
             );
             $st->execute(array(
-                $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'],
+                $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'], $d['rol'],
+                $d['red_salud'], $d['nombre_establecimiento'],
                 password_hash($d['clave'], PASSWORD_DEFAULT), $id,
             ));
         } else {
             $st = db()->prepare(
                 'UPDATE usuarios
-                    SET username = ?, nombre_completo = ?, ci = ?, telefono = ?, correo = ?
+                    SET username = ?, nombre_completo = ?, ci = ?, telefono = ?, correo = ?,
+                        rol = ?, red_salud = ?, nombre_establecimiento = ?
                   WHERE id = ?'
             );
             $st->execute(array(
-                $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'], $id,
+                $d['username'], $d['nombre_completo'], $d['ci'], $d['telefono'], $d['correo'], $d['rol'],
+                $d['red_salud'], $d['nombre_establecimiento'], $id,
             ));
         }
 
@@ -400,6 +586,9 @@ function actualizar_usuario($id, array $in)
         if ($sesion && $sesion['id'] === $id) {
             $_SESSION['username']        = $d['username'];
             $_SESSION['nombre_completo'] = $d['nombre_completo'];
+            $_SESSION['rol']                    = $d['rol'];
+            $_SESSION['red_salud']              = $d['red_salud'];
+            $_SESSION['nombre_establecimiento'] = $d['nombre_establecimiento'];
         }
 
         return array('ok' => true, 'clave_cambiada' => $d['clave'] !== null);
@@ -444,6 +633,11 @@ function eliminar_usuario($id)
         if ($total <= 1) {
             return array('error' => 'No se puede eliminar el único usuario del sistema: el registro '
                 . 'quedaría abierto al público.');
+        }
+
+        if ($usuario['rol'] === ROL_ADMINISTRADOR && !hay_otro_administrador($id)) {
+            return array('error' => 'No se puede eliminar la única cuenta de administrador: '
+                . 'el panel se quedaría sin quien lo administre.');
         }
 
         db()->prepare('DELETE FROM usuarios WHERE id = ?')->execute(array($id));

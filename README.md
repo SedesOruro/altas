@@ -8,8 +8,12 @@ Departamento de Oruro y la leyenda «SERVICIO DEPARTAMENTAL DE SALUD - ORURO».
 
 El sistema tiene dos caras:
 
-**Pública** — `index.html` es la portada de presentación, con el botón **«Registro de Altas»**
-que lleva al formulario (`registro_altas.html`), donde el personal de salud:
+**Pública** — `index.html` es la portada de presentación. Solo explica el sistema: su botón
+**«Registro de Altas»** lleva al inicio de sesión, porque el formulario maneja datos clínicos
+identificables y dejó de ser abierto cuando se crearon los roles.
+
+**Con sesión** — tras autenticarse, el personal de salud llega al panel, y desde él al
+formulario (`registro_altas.php`), donde:
 
 1. **Llena la información** — el sistema asigna un **código de alta correlativo único**
    (`ALTA-000001`) y genera el **PDF** con el formato oficial, listo para imprimir y firmar
@@ -18,9 +22,41 @@ que lleva al formulario (`registro_altas.html`), donde el personal de salud:
    que el código corresponda a una solicitud registrada antes de aceptar el archivo, y marca
    el registro como `verificado`.
 
-**Privada** — el botón **«Inicio de Sesión»** de la portada abre el panel de administración
-(AdminLTE), con el listado completo de altas —filtros, paginación y acceso a ambos PDF de
-cada registro— y la gestión de los usuarios que pueden entrar.
+El panel (AdminLTE) muestra el listado completo de altas —filtros, paginación y acceso a
+ambos PDF de cada registro— y, para el administrador, la gestión de los usuarios.
+
+### Los dos roles
+
+| | Operador | Administrador |
+|---|---|---|
+| Registrar altas y subir el documento firmado | Solo de su establecimiento | De cualquiera |
+| Consultar el listado y abrir los dos PDF | Solo de su establecimiento | Todos |
+| Devolver un alta a pendiente | No | Sí |
+| Crear, editar, activar o eliminar usuarios | No | Sí |
+
+### El establecimiento vive en la cuenta
+
+Cada operador lleva su **red** y su **establecimiento** en `usuarios.red_salud` y
+`usuarios.nombre_establecimiento`, que el administrador elige al darlo de alta. A partir de
+ahí:
+
+- El formulario **no pregunta** por los tres datos de la sección 1: los muestra fijos y
+  `crear_alta.php` los toma de la sesión, **descartando lo que venga en la petición**. Una
+  petición fabricada a mano con otro hospital se guarda igual con el propio: está probado.
+- El listado, las cifras del encabezado, los dos PDF, la verificación de código y la subida
+  del firmado quedan acotados al mismo establecimiento. No basta con ocultar filas: cada
+  entrega comprueba el alcance, porque si no bastaría con probar identificadores.
+
+El administrador **no** tiene establecimiento asignado (`NULL`): ve todo y, cuando registra
+un alta, vuelve a elegir red y establecimiento como antes. Un operador al que todavía no se
+le asignó ninguno se comporta igual que un administrador en este punto, así que conviene
+asignárselo antes de entregarle la cuenta.
+
+El rol se guarda en `usuarios.rol` y se comprueba **en el servidor** en cada página y en cada
+acción; ocultar un botón es solo cortesía para el operador, no la defensa. La primera cuenta
+del sistema es administradora por definición —si no, nadie podría crear las demás— y el panel
+impide quedarse sin ningún administrador activo, ya sea rebajándolo de rol, desactivándolo o
+eliminándolo.
 
 ---
 
@@ -81,13 +117,15 @@ mysqldump -u USUARIO -p sedes_altas > respaldo_antes_de_migrar.sql
 mysql -u USUARIO -p sedes_altas < migracion_v1_a_v2.sql   # campos del formulario nuevo
 mysql -u USUARIO -p sedes_altas < migracion_v2_a_v3.sql   # tabla de usuarios del panel
 mysql -u USUARIO -p sedes_altas < migracion_v3_a_v4.sql   # datos de quien firma el alta
+mysql -u USUARIO -p sedes_altas < migracion_v4_a_v5.sql   # roles de usuario
+mysql -u USUARIO -p sedes_altas < migracion_v5_a_v6.sql   # establecimiento del operador
 ```
 
 Las filas anteriores quedan con valores provisionales visibles (`(no registrado)`, edad `0`)
 en los campos que antes no existían; corríjalos a mano si esos registros aún se usan.
 
-Si ya tenía la versión 2 instalada, bastan `migracion_v2_a_v3.sql` y `migracion_v3_a_v4.sql`;
-si venía de la 3, solo esta última.
+Aplique solo las migraciones posteriores a su versión: desde la 2, las tres últimas;
+desde la 3, las tres últimas; desde la 4, las dos últimas; desde la 5, solo la última.
 
 ### 2. Configurar la conexión
 
@@ -123,8 +161,9 @@ servidor web (normalmente `755`, o `775` si el propietario difiere). La carpeta 
 ### 4. Crear el primer usuario del panel
 
 Abrir `registro.php` en el navegador y completar el formulario. **Esa página solo está
-abierta mientras no exista ningún usuario**: creado el primero, exige haber iniciado sesión,
-de modo que las cuentas posteriores las dan de alta quienes ya tienen acceso.
+abierta mientras no exista ningún usuario**: creado el primero —que es siempre
+administrador—, exige una sesión de administrador, de modo que las cuentas posteriores,
+operadores incluidos, las da de alta quien administra el sistema.
 
 Es deliberado: el panel muestra datos clínicos identificables, y un registro público
 equivaldría a repartir las llaves. Si en su caso prefiere un registro abierto, quite la
@@ -146,7 +185,7 @@ DELETE FROM alta_adjuntos; DELETE FROM altas; ALTER TABLE altas AUTO_INCREMENT =
 
 ```
 index.html                 Portada pública de presentación
-registro_altas.php         Formulario de altas (llenado + subida del firmado)
+registro_altas.php         Formulario de altas (llenado + subida del firmado; exige sesión)
 login.php                  Inicio de sesión del panel
 registro.php               Alta de usuarios del panel
 salir.php                  Cierre de sesión
@@ -180,6 +219,7 @@ subir_adjunto.php          POST  → recibe y registra el documento firmado
 
 lib/auth.php               Sesiones, contraseñas, CSRF y guardias del panel
 lib/redes.php              Catálogo de redes, municipios y establecimientos
+lib/campos_establecimiento.php  Campos red/establecimiento del alta de usuarios
 lib/helpers.php            Respuestas JSON, validación, limitador de intentos
 lib/pdf_alta.php           Maquetación del PDF (fidelidad al formato Word)
 lib/fpdf/                  Librería FPDF 1.86 (incluida, sin Composer)
@@ -188,6 +228,8 @@ schema.sql                 Creación de las tablas MySQL (instalación nueva)
 migracion_v1_a_v2.sql      Actualización de la v1 al formulario nuevo
 migracion_v2_a_v3.sql      Agrega la tabla de usuarios del panel
 migracion_v3_a_v4.sql      Agrega los datos de quien firma el alta
+migracion_v4_a_v5.sql      Agrega el rol (administrador / operador)
+migracion_v5_a_v6.sql      Ata cada operador a su establecimiento
 
 DEPLOY.md                  Guía de despliegue en CapRover
 Dockerfile                 Imagen Apache + mod_php para el despliegue en contenedor
@@ -329,6 +371,7 @@ horizontal y trae dos botones por fila:
   servidor: **nadie puede borrarse a sí mismo** (cerraría su propia sesión a mitad de la
   operación) ni **dejar la tabla de usuarios vacía**, porque `registro.php` se abre al
   público cuando no hay ningún usuario y eso dejaría el registro a merced de cualquiera.
+  Tampoco se puede eliminar ni desactivar **la última cuenta de administrador activa**.
 
 Todas las acciones van por POST con testigo anti-CSRF y responden con una redirección, para
 que al recargar la página no se repita la operación.

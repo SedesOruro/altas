@@ -18,6 +18,11 @@
   var indicador  = $('#indicador-pagina');
   var COLUMNAS   = document.querySelectorAll('#tabla-altas thead th').length;
 
+  // Rol de quien mira la tabla. El servidor vuelve a comprobarlo en cada
+  // acción; esto solo evita ofrecer botones que serían rechazados.
+  var panel    = document.querySelector('[data-rol]');
+  var ES_ADMIN = !panel || panel.getAttribute('data-rol') === 'administrador';
+
   var estado = { pagina: 1, paginas: 1, cargando: false };
   var temporizador = null;
 
@@ -88,8 +93,9 @@
               'PDF subido</button>';
     }
 
-    // Solo tiene sentido devolver a pendiente lo que ya está verificado.
-    if (alta.estado === 'verificado') {
+    // Solo tiene sentido devolver a pendiente lo que ya está verificado, y
+    // solo el administrador puede hacerlo.
+    if (ES_ADMIN && alta.estado === 'verificado') {
       html += ' <button type="button" class="btn btn-xs btn-warning" data-pendiente="' +
               esc(alta.codigo_alta) + '" ' +
               'title="Devolver el alta a pendiente para que se pueda subir el documento otra vez">' +

@@ -14,8 +14,9 @@
  */
 
 require_once __DIR__ . '/_plantilla.php';
+require_once __DIR__ . '/../lib/campos_establecimiento.php';
 
-$sesion = exigir_sesion();
+$sesion = exigir_administrador();
 $base   = ruta_base();
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
@@ -40,6 +41,9 @@ $datos = array(
     'ci'              => $usuario['ci'],
     'telefono'        => $usuario['telefono'],
     'correo'          => $usuario['correo'],
+    'rol'             => $usuario['rol'],
+    'red_salud'              => $usuario['red_salud'],
+    'nombre_establecimiento' => $usuario['nombre_establecimiento'],
 );
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -146,12 +150,34 @@ admin_cabecera('Editar usuario', 'usuarios');
               <?= error_campo($errores, 'telefono') ?>
             </div>
 
-            <div class="form-group col-12">
+            <div class="form-group col-md-6">
               <label for="correo">Correo electrónico <span class="text-danger">*</span></label>
               <input type="email" class="form-control<?= clase_campo($errores, 'correo') ?>" id="correo"
                      name="correo" maxlength="160" value="<?= h($datos['correo']) ?>" required>
               <?= error_campo($errores, 'correo') ?>
             </div>
+
+            <div class="form-group col-md-6">
+              <label for="rol">Rol <span class="text-danger">*</span></label>
+              <select class="form-control<?= clase_campo($errores, 'rol') ?>" id="rol" name="rol" required>
+                <?php foreach (roles_disponibles() as $valor => $etiqueta): ?>
+                  <option value="<?= h($valor) ?>"<?= $datos['rol'] === $valor ? ' selected' : '' ?>>
+                    <?= h($etiqueta) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+              <small class="form-text text-muted">
+                El administrador ve y administra todo; el operador registra altas y consulta el listado.
+                <?php if ($esPropia): ?>
+                  Cuidado: está editando su propia cuenta.
+                <?php endif; ?>
+              </small>
+              <?= error_campo($errores, 'rol') ?>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <?php campos_establecimiento($datos, $errores); ?>
           </div>
 
           <hr>
@@ -237,5 +263,7 @@ admin_cabecera('Editar usuario', 'usuarios');
 
   </div>
 </div>
+
+<?php script_establecimiento($base); ?>
 
 <?php admin_pie(); ?>

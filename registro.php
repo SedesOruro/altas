@@ -5,7 +5,8 @@
  * Quién puede usar esta página:
  *   - Cualquiera, mientras no exista ningún usuario, para poder crear el
  *     primer administrador tras la instalación.
- *   - A partir de ahí, solo quien ya tenga sesión abierta.
+ *   - A partir de ahí, solo un administrador: crear cuentas es justamente
+ *     lo que separa a un administrador de un operador.
  *
  * Es deliberado: el panel muestra datos clínicos identificables, así que
  * dejar el registro abierto al público equivaldría a repartir las llaves.
@@ -14,21 +15,26 @@
  */
 
 require_once __DIR__ . '/lib/auth.php';
+require_once __DIR__ . '/lib/campos_establecimiento.php';
 
 $base            = ruta_base();
 $primerArranque  = sin_usuarios();
 $sesion          = usuario_actual();
-$registroAbierto = $primerArranque || $sesion !== null;
+$registroAbierto = $primerArranque || ($sesion !== null && $sesion['rol'] === ROL_ADMINISTRADOR);
 
 $errores = array();
 $exito   = '';
 $datos   = array(
     'username' => '', 'nombre_completo' => '', 'ci' => '', 'telefono' => '', 'correo' => '',
+    // El primer usuario es administrador a la fuerza; el resto nace con el
+    // rol más limitado y se sube solo si alguien lo elige.
+    'rol' => $primerArranque ? ROL_ADMINISTRADOR : ROL_OPERADOR,
+    'red_salud' => '', 'nombre_establecimiento' => '',
 );
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$registroAbierto) {
-        $errores['general'] = 'El registro de usuarios está reservado al personal que ya tiene acceso.';
+        $errores['general'] = 'El registro de usuarios está reservado al administrador del sistema.';
     } elseif (!csrf_valido(isset($_POST['csrf']) ? $_POST['csrf'] : '')) {
         $errores['general'] = 'La sesión del formulario caducó. Vuelva a intentarlo.';
     } else {
@@ -48,8 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . $base . 'admin/index.php');
                 exit;
             }
-            $exito = 'Usuario «' . $datos['username'] . '» registrado correctamente.';
-            $datos = array('username' => '', 'nombre_completo' => '', 'ci' => '', 'telefono' => '', 'correo' => '');
+            $exito = 'Usuario «' . $datos['username'] . '» registrado correctamente como '
+                   . mb_strtolower(nombre_rol($datos['rol']), 'UTF-8') . '.';
+            $datos = array(
+                'username' => '', 'nombre_completo' => '', 'ci' => '', 'telefono' => '', 'correo' => '',
+                'rol' => ROL_OPERADOR, 'red_salud' => '', 'nombre_establecimiento' => '',
+            );
         } else {
             $errores = $resultado['errores'];
         }
@@ -79,7 +89,7 @@ function clase_de($errores, $campo)
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="<?= h($base) ?>assets/logo-sedes.png" type="image/png">
 <link rel="stylesheet" href="<?= h($base) ?>assets/vendor/adminlte.min.css">
-<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=13">
+<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=15">
 </head>
 <body class="pagina-acceso">
 
@@ -100,8 +110,9 @@ function clase_de($errores, $campo)
         </div>
       <?php elseif (!$registroAbierto): ?>
         <div class="alert alert-warning py-2">
-          El registro de usuarios está reservado al personal autorizado.
-          <a href="<?= h($base) ?>login.php">Inicie sesión</a> para crear una cuenta nueva.
+          El registro de usuarios está reservado al administrador del sistema.
+          <a href="<?= h($base) ?>login.php">Inicie sesión</a> con una cuenta de administrador
+          para crear una cuenta nueva.
         </div>
       <?php endif; ?>
 
@@ -147,12 +158,38 @@ function clase_de($errores, $campo)
             <?= error_de($errores, 'telefono') ?>
           </div>
 
-          <div class="form-group col-12">
+          <div class="form-group col-md-6">
             <label for="correo">Correo electrónico <span class="text-danger">*</span></label>
             <input type="email" class="form-control<?= clase_de($errores, 'correo') ?>" id="correo"
                    name="correo" maxlength="160" value="<?= h($datos['correo']) ?>" required>
             <?= error_de($errores, 'correo') ?>
           </div>
+
+          <div class="form-group col-md-6">
+            <label for="rol">Rol <span class="text-danger">*</span></label>
+            <?php if ($primerArranque): ?>
+              <input type="text" class="form-control" id="rol" value="Administrador" readonly>
+              <input type="hidden" name="rol" value="<?= h(ROL_ADMINISTRADOR) ?>">
+              <small class="form-text text-muted">
+                La primera cuenta del sistema es siempre administradora.
+              </small>
+            <?php else: ?>
+              <select class="form-control<?= clase_de($errores, 'rol') ?>" id="rol" name="rol" required>
+                <?php foreach (roles_disponibles() as $valor => $etiqueta): ?>
+                  <option value="<?= h($valor) ?>"<?= $datos['rol'] === $valor ? ' selected' : '' ?>>
+                    <?= h($etiqueta) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+              <small class="form-text text-muted">
+                <strong>Operador:</strong> registra altas y consulta el listado.
+                <strong>Administrador:</strong> además administra usuarios y el estado de las altas.
+              </small>
+            <?php endif; ?>
+            <?= error_de($errores, 'rol') ?>
+          </div>
+
+          <?php if (!$primerArranque) { campos_establecimiento($datos, $errores); } ?>
 
           <div class="form-group col-md-6">
             <label for="clave">Contraseña <span class="text-danger">*</span></label>
@@ -188,6 +225,8 @@ function clase_de($errores, $campo)
   </p>
 
 </div>
+
+<?php if (!$primerArranque) { script_establecimiento($base); } ?>
 
 </body>
 </html>

@@ -23,6 +23,8 @@ function icono($nombre, $tamano = 18)
         'subido'    => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>',
         'inicio'    => '<path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/>',
         'buscar'    => '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+        'nueva'     => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>'
+                     . '<path d="M14 2v6h6"/><path d="M12 12v6"/><path d="M9 15h6"/>',
     );
 
     $d = isset($trazos[$nombre]) ? $trazos[$nombre] : $trazos['documento'];
@@ -43,10 +45,17 @@ function admin_cabecera($titulo, $seccion = 'panel')
 {
     $usuario = usuario_actual();
     $base    = ruta_base();
-    $menu    = array(
-        'panel'    => array('Altas registradas', 'index.php',    'panel'),
-        'usuarios' => array('Usuarios',          'usuarios.php', 'usuarios'),
+    $esAdmin = $usuario && $usuario['rol'] === ROL_ADMINISTRADOR;
+
+    // El menú se arma según el rol: al operador no se le enseña una puerta
+    // que después no puede abrir.
+    $menu = array(
+        'panel' => array('Altas registradas', 'index.php', 'panel'),
+        'nueva' => array('Registrar nueva alta', $base . 'registro_altas.php', 'nueva'),
     );
+    if ($esAdmin) {
+        $menu['usuarios'] = array('Usuarios', 'usuarios.php', 'usuarios');
+    }
     ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -57,7 +66,7 @@ function admin_cabecera($titulo, $seccion = 'panel')
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="<?= h($base) ?>assets/logo-sedes.png" type="image/png">
 <link rel="stylesheet" href="<?= h($base) ?>assets/vendor/adminlte.min.css">
-<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=13">
+<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=15">
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">
@@ -78,6 +87,9 @@ function admin_cabecera($titulo, $seccion = 'panel')
       <li class="nav-item">
         <span class="navbar-text mr-2 d-none d-sm-inline">
           <?= h($usuario ? $usuario['nombre_completo'] : '') ?>
+          <span class="badge badge-rol <?= $esAdmin ? 'badge-rol--admin' : 'badge-rol--operador' ?>">
+            <?= h($usuario ? nombre_rol($usuario['rol']) : '') ?>
+          </span>
         </span>
       </li>
       <li class="nav-item">

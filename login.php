@@ -56,7 +56,7 @@ $primerArranque = sin_usuarios();
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="<?= h($base) ?>assets/logo-sedes.png" type="image/png">
 <link rel="stylesheet" href="<?= h($base) ?>assets/vendor/adminlte.min.css">
-<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=13">
+<link rel="stylesheet" href="<?= h($base) ?>assets/admin.css?v=15">
 </head>
 <body class="pagina-acceso">
 

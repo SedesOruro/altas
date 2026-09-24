@@ -289,6 +289,8 @@ mysqldump -u root -p sedes_altas > respaldo_antes_de_migrar.sql
 mysql -u root -p sedes_altas < migracion_v1_a_v2.sql   # campos del formulario nuevo
 mysql -u root -p sedes_altas < migracion_v2_a_v3.sql   # tabla de usuarios del panel
 mysql -u root -p sedes_altas < migracion_v3_a_v4.sql   # datos de quien firma el alta
+mysql -u root -p sedes_altas < migracion_v4_a_v5.sql   # roles de usuario
+mysql -u root -p sedes_altas < migracion_v5_a_v6.sql   # establecimiento del operador
 ```
 
 ### Crear el primer usuario del panel

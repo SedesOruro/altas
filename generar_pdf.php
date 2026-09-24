@@ -11,9 +11,15 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib/auth.php';
 require_once __DIR__ . '/lib/pdf_alta.php';
 
 exigir_metodo('GET');
+
+// El PDF lleva datos clínicos identificables: se entrega solo a quien
+// tiene sesión abierta, igual que el documento escaneado.
+exigir_sesion_json();
+
 limitar_intentos('pdf', 60, 300);
 
 $codigo = normalizar_codigo(isset($_GET['codigo']) ? $_GET['codigo'] : '');
@@ -31,6 +37,12 @@ try {
 
 if (!$alta) {
     error_json('El código de alta ingresado no corresponde a ninguna solicitud registrada.', 404);
+}
+
+// El PDF de un alta ajena no se entrega ni sabiendo el código: un operador
+// solo alcanza los de su propio establecimiento.
+if (!puede_ver_establecimiento($alta['nombre_establecimiento'])) {
+    error_json('Ese código corresponde a otro establecimiento de salud.', 403);
 }
 
 try {

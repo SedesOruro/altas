@@ -17,7 +17,7 @@
 require_once __DIR__ . '/../lib/auth.php';
 
 exigir_metodo('GET');
-exigir_sesion_json();
+$sesion = exigir_sesion_json();
 
 // ---------------------------------------------------------------------
 // Filtros
@@ -42,6 +42,16 @@ if ($desde !== '' && $hasta !== '' && $desde > $hasta) {
 
 $condiciones = array();
 $parametros  = array();
+
+// Alcance de la cuenta: el operador solo ve las altas de su
+// establecimiento; el administrador, que no tiene ninguno asignado, las ve
+// todas. Es una condición más del WHERE, así que también acota el total y
+// la paginación, no solo las filas visibles.
+$miEstablecimiento = establecimiento_de_sesion();
+if ($miEstablecimiento) {
+    $condiciones[]                    = 'a.nombre_establecimiento = :establecimiento';
+    $parametros[':establecimiento']   = $miEstablecimiento['nombre_establecimiento'];
+}
 
 if ($q !== '') {
     // Un marcador distinto por columna: con sentencias preparadas nativas
@@ -116,6 +126,7 @@ try {
 
 responder(array(
     'ok'         => true,
+    'alcance'    => $miEstablecimiento ? $miEstablecimiento['nombre_establecimiento'] : null,
     'total'      => $total,
     'pagina'     => $pagina,
     'paginas'    => $paginas,

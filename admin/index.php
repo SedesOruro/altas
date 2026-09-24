@@ -10,19 +10,45 @@
 
 require_once __DIR__ . '/_plantilla.php';
 
-exigir_sesion();
+$sesion  = exigir_sesion();
+$esAdmin = $sesion['rol'] === ROL_ADMINISTRADOR;
+
+// Aviso al operador que intentó entrar a una pantalla de administración.
+$avisoRol = (isset($_GET['aviso']) && $_GET['aviso'] === 'solo_administrador');
 
 // Cifras del encabezado. Son cuatro consultas muy simples; hacerlas aquí
 // evita un viaje extra del navegador al cargar el panel.
+//
+// Cuentan lo mismo que muestra la tabla: si la cuenta está atada a un
+// establecimiento, solo sus altas. Un resumen del departamento entero
+// encima de una tabla de un solo hospital sería un dato engañoso.
+$miEstablecimiento = establecimiento_de_sesion();
+
 $resumen = array('total' => 0, 'verificadas' => 0, 'pendientes' => 0, 'hoy' => 0);
 $errorBd = null;
 
+$donde      = $miEstablecimiento ? ' WHERE nombre_establecimiento = :establecimiento' : '';
+$parametros = $miEstablecimiento
+    ? array(':establecimiento' => $miEstablecimiento['nombre_establecimiento'])
+    : array();
+
+/** Cuenta altas aplicando el alcance de la cuenta y una condición extra. */
+function contar_altas($extra, $donde, $parametros)
+{
+    $sql = 'SELECT COUNT(*) FROM altas' . $donde;
+    if ($extra !== '') {
+        $sql .= ($donde === '' ? ' WHERE ' : ' AND ') . $extra;
+    }
+    $st = db()->prepare($sql);
+    $st->execute($parametros);
+    return (int) $st->fetchColumn();
+}
+
 try {
-    $pdo = db();
-    $resumen['total']       = (int) $pdo->query('SELECT COUNT(*) FROM altas')->fetchColumn();
-    $resumen['verificadas'] = (int) $pdo->query("SELECT COUNT(*) FROM altas WHERE estado = 'verificado'")->fetchColumn();
-    $resumen['pendientes']  = (int) $pdo->query("SELECT COUNT(*) FROM altas WHERE estado = 'generado'")->fetchColumn();
-    $resumen['hoy']         = (int) $pdo->query('SELECT COUNT(*) FROM altas WHERE DATE(created_at) = CURDATE()')->fetchColumn();
+    $resumen['total']       = contar_altas('', $donde, $parametros);
+    $resumen['verificadas'] = contar_altas("estado = 'verificado'", $donde, $parametros);
+    $resumen['pendientes']  = contar_altas("estado = 'generado'", $donde, $parametros);
+    $resumen['hoy']         = contar_altas('DATE(created_at) = CURDATE()', $donde, $parametros);
 } catch (Exception $e) {
     error_log('[altas] panel resumen: ' . $e->getMessage());
     $errorBd = 'No fue posible leer el resumen desde la base de datos.';
@@ -30,6 +56,27 @@ try {
 
 admin_cabecera('Altas registradas', 'panel');
 ?>
+
+<?php if ($avisoRol): ?>
+  <div class="alert alert-warning py-2">
+    Esa sección está reservada al administrador del sistema.
+  </div>
+<?php endif; ?>
+
+<!-- Acción principal del módulo de altas. Para el operador es lo primero
+     que necesita al entrar, así que va arriba y destacada. -->
+<div class="barra-accion">
+  <a href="<?= h(ruta_base()) ?>registro_altas.php" class="btn btn-primary btn-accion">
+    <?= icono('nueva', 18) ?> Registrar nueva alta
+  </a>
+  <span class="text-muted small">
+    <?php if ($miEstablecimiento): ?>
+      Se registrará a nombre de <strong><?= h($miEstablecimiento['nombre_establecimiento']) ?></strong>.
+    <?php else: ?>
+      Llene el formulario para obtener el código correlativo y el PDF oficial.
+    <?php endif; ?>
+  </span>
+</div>
 
 <?php if ($errorBd): ?>
   <div class="alert alert-danger"><?= h($errorBd) ?></div>
@@ -60,10 +107,16 @@ admin_cabecera('Altas registradas', 'panel');
 
 <!-- Tabla -->
 <!-- El testigo anti-CSRF se publica aquí para que admin.js lo envíe en las
-     acciones que modifican datos (devolver un alta a pendiente). -->
-<div class="card" data-csrf="<?= h(csrf_token()) ?>">
+     acciones que modifican datos (devolver un alta a pendiente), y el rol
+     para que no dibuje botones que el servidor va a rechazar. -->
+<div class="card" data-csrf="<?= h(csrf_token()) ?>" data-rol="<?= h($sesion['rol']) ?>">
   <div class="card-header">
-    <h3 class="card-title">Listado de altas</h3>
+    <h3 class="card-title">
+      Listado de altas
+      <?php if ($miEstablecimiento): ?>
+        <span class="card-title__alcance">· <?= h($miEstablecimiento['nombre_establecimiento']) ?></span>
+      <?php endif; ?>
+    </h3>
   </div>
 
   <div class="card-body">
@@ -158,4 +211,4 @@ admin_cabecera('Altas registradas', 'panel');
   </div>
 </div>
 
-<?php admin_pie(array('assets/admin.js?v=5')); ?>
+<?php admin_pie(array('assets/admin.js?v=6')); ?>

@@ -83,9 +83,19 @@ CREATE TABLE IF NOT EXISTS usuarios (
   ci VARCHAR(30) NOT NULL UNIQUE,
   telefono VARCHAR(30) NOT NULL,
   correo VARCHAR(160) NOT NULL UNIQUE,
+  -- administrador: panel completo (altas + usuarios).
+  -- operador: registra altas y consulta el listado.
+  rol ENUM('administrador','operador') NOT NULL DEFAULT 'operador',
+  -- Establecimiento al que pertenece el operador: el formulario lo toma de
+  -- aqui y no del navegador. NULL en el administrador, que los abarca todos.
+  red_salud VARCHAR(255) NULL,
+  nombre_establecimiento VARCHAR(255) NULL,
   password_hash VARCHAR(255) NOT NULL,
   activo TINYINT(1) NOT NULL DEFAULT 1,
   ultimo_acceso DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_rol (rol),
+  INDEX idx_establecimiento (nombre_establecimiento)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

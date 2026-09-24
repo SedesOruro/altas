@@ -494,6 +494,32 @@ select {
   color: var(--gris-700);
 }
 
+/* Dato que la cuenta ya trae resuelto y no se elige: el establecimiento
+   del operador. Se muestra con el mismo peso de un campo lleno, pero sin
+   control que invite a tocarlo. */
+.fijo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--azul-suave, #f6f1ea);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--color-marca);
+  border-radius: 0 8px 8px 0;
+}
+
+.fijo__etiqueta {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gris-700);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.fijo__valor { font-size: 16px; color: var(--marca-900); }
+.fijo__detalle { font-size: 13px; color: var(--gris-700); }
+
 /* Aclaracion breve al inicio de un bloque, delante de sus campos. */
 .bloque__nota {
   margin: 0 0 var(--e-4);
@@ -701,6 +727,27 @@ select {
   padding: 9px 0;
   padding-bottom: max(9px, env(safe-area-inset-bottom));
   box-shadow: 0 -2px 10px rgba(16, 30, 50, .06);
+}
+
+/* Pie del formulario: el texto institucional y, a la derecha, quién tiene
+   la sesión abierta. En móvil se apilan centrados. */
+.pie .pie__interior {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px 16px;
+}
+
+.pie__sesion a {
+  color: var(--color-marca);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 599px) {
+  .pie .pie__interior { justify-content: center; }
 }
 
 .pie p {

@@ -12,8 +12,10 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib/auth.php';
 
 exigir_metodo('GET');
+$sesion = exigir_sesion_json();
 limitar_intentos('verificar', 30, 300);
 
 $codigo = normalizar_codigo(isset($_GET['codigo']) ? $_GET['codigo'] : '');
@@ -31,6 +33,13 @@ try {
 
 if (!$alta) {
     error_json('El código de alta ingresado no corresponde a ninguna solicitud registrada.', 404);
+}
+
+// Un alta de otro establecimiento se trata como inexistente en la
+// respuesta al operador, salvo que se le diga de quién es: saber que el
+// código existe no le sirve y expondría datos de otro hospital.
+if (!puede_ver_establecimiento($alta['nombre_establecimiento'])) {
+    error_json('Ese código corresponde a otro establecimiento de salud.', 403);
 }
 
 try {

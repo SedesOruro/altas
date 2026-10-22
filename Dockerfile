@@ -2,7 +2,7 @@
 # Sistema "Alta Solicitada" - SEDES Oruro
 # Imagen para CapRover: Apache + mod_php, sin ningun proceso adicional.
 # =====================================================================
-FROM php:8.3-apache
+FROM php:8.3.36-apache
 
 # --- Extensiones de PHP ----------------------------------------------
 # La imagen oficial ya trae iconv, mbstring, fileinfo y zlib, que es todo
